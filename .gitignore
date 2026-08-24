@@ -1,0 +1,5 @@
+# Your music stays local — never commit copyrighted audio.
+audio/*
+!audio/.gitkeep
+_testaudio/
+.DS_Store

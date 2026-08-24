@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJ Bingo — Console</title>
+<style>
+  :root{
+    --bg:#14131a; --panel:#1e1d27; --panel2:#272634; --ink:#f2f0ea; --muted:#9a95a8;
+    --rule:#37354a; --accent:#f5b73d; --good:#3fbf6b; --bad:#e0534f; --info:#4aa8e0;
+    --r1:#f5b73d; --r2:#2dd4bf; --r3:#a78bfa; --r4:#fb7185;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--info)}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+  button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--rule);
+         background:var(--panel2);color:var(--ink);padding:8px 14px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#14131a;border-color:var(--accent)}
+  button.big{font-size:17px;padding:14px 22px}
+  input,select{font:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--rule);
+         border-radius:7px;padding:8px 10px}
+  .wrap{max-width:1500px;margin:0 auto;padding:18px 20px 60px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  header h1{font-size:20px;margin:0}
+  .seedbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .seedbox input{width:190px;font-weight:700;color:var(--accent)}
+
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:10px 16px;border-radius:9px;border:1px solid var(--rule);background:var(--panel);
+       cursor:pointer;font-weight:600;display:flex;gap:9px;align-items:center}
+  .tab .dot{width:9px;height:9px;border-radius:50%}
+  .tab.active{background:var(--panel2);border-color:currentColor}
+  .tab .cnt{font-size:12px;color:var(--muted);font-weight:500}
+
+  .cols{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;align-items:start}
+  @media(max-width:1050px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+
+  /* now playing */
+  #np{border-color:var(--accent)}
+  .np-title{font-size:26px;font-weight:800;line-height:1.15}
+  .np-artist{color:var(--muted);margin-top:2px}
+  .np-idle{color:var(--muted);font-size:17px;font-weight:600}
+  .bar{height:9px;background:var(--panel2);border-radius:5px;overflow:hidden;margin:14px 0 6px}
+  .bar>div{height:100%;background:var(--accent);width:0;transition:width .1s linear}
+  .cd{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  .np-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+
+  /* song list */
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+     padding:6px 8px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--panel)}
+  td{padding:6px 8px;border-bottom:1px solid #2b2937;vertical-align:middle}
+  tr.played{opacity:.42}
+  tr.playing{background:rgba(245,183,61,.13)}
+  tr.next td{box-shadow:inset 3px 0 0 var(--info)}
+  .sn{color:var(--muted);font-variant-numeric:tabular-nums;width:26px}
+  .st{font-weight:600}
+  .sa{color:var(--muted);font-size:12.5px}
+  .hook{width:62px;text-align:right;font-variant-numeric:tabular-nums;padding:3px 6px!important;font-size:13px}
+  .src{font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  .src.file{background:rgba(63,191,107,.18);color:var(--good)}
+  .src.none{background:rgba(224,83,79,.15);color:var(--bad)}
+  .listwrap{max-height:62vh;overflow:auto}
+  .mini{padding:4px 9px;font-size:12px;font-weight:600}
+
+  /* verify */
+  .vgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px}
+  .vcell{aspect-ratio:1/1;border:1px solid var(--rule);border-radius:6px;padding:3px;font-size:10px;
+         line-height:1.15;display:flex;flex-direction:column;justify-content:center;align-items:center;
+         text-align:center;overflow:hidden;background:var(--panel2)}
+  .vcell.marked{background:rgba(63,191,107,.22);border-color:var(--good)}
+  .vcell.win{background:var(--good);color:#0b2312;border-color:var(--good);font-weight:700}
+  .vcell.free{background:var(--panel2);color:var(--muted)}
+  .vcell .vt{font-weight:600;overflow-wrap:anywhere}
+  .verdict{margin-top:14px;padding:12px 14px;border-radius:9px;font-weight:700}
+  .verdict.yes{background:rgba(63,191,107,.16);border:1px solid var(--good);color:#9fe8b8}
+  .verdict.no{background:rgba(224,83,79,.14);border:1px solid var(--bad);color:#f3aeac}
+  .verdict small{display:block;font-weight:500;margin-top:5px;opacity:.9;font-size:12.5px}
+
+  .drop{border:2px dashed var(--rule);border-radius:10px;padding:20px;text-align:center;color:var(--muted);
+        font-size:13.5px;cursor:pointer}
+  .drop.over{border-color:var(--accent);color:var(--accent)}
+  .muted{color:var(--muted);font-size:13px}
+  .rowflex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .warnbar{background:rgba(245,183,61,.13);border:1px solid var(--accent);color:var(--accent);
+           padding:9px 12px;border-radius:8px;font-size:13px;margin-bottom:14px}
+  kbd{background:var(--panel2);border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;
+      padding:1px 5px;font-size:11.5px;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>DJ Bingo — Console</h1>
+    <div class="rowflex">
+      <div class="seedbox">Master seed <input type="text" id="seed" value="ANNIVERSARY-50"></div>
+      <div class="seedbox">Cards in play
+        <input type="number" id="cardFrom" value="1" min="1" style="width:62px">–
+        <input type="number" id="cardTo" value="40" min="1" style="width:62px"></div>
+      <button class="mini" id="loadCfg">Load config…</button>
+      <input type="file" id="cfgFile" accept="application/json" hidden>
+    </div>
+  </header>
+
+  <div class="warnbar" id="seedWarn">
+    The seed must exactly match the one printed at the bottom of the guests' cards, or verification will be wrong.
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="cols">
+    <div>
+      <div class="card" id="np">
+        <h2>Now playing</h2>
+        <div id="npBody"><div class="np-idle">Nothing playing — hit <b>Play next</b> or pick a song.</div></div>
+        <div class="bar"><div id="npBar"></div></div>
+        <div class="cd"><span id="npFrom">—</span><span id="npLeft"></span></div>
+        <div class="np-actions">
+          <button class="primary big" id="btnNext">▶︎ Play next</button>
+          <button class="big" id="btnStop">■ Stop</button>
+          <button class="big" id="btnReplay">↺ Replay</button>
+        </div>
+        <div class="muted" style="margin-top:10px">
+          <kbd>space</kbd> play/stop · <kbd>N</kbd> next · <kbd>R</kbd> replay
+          &nbsp;·&nbsp; snippet
+          <input type="number" id="snipLen" value="30" min="5" max="90" style="width:58px;padding:3px 6px">s
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="rowflex" style="justify-content:space-between;margin-bottom:10px">
+          <h2 style="margin:0" id="listTitle">Songs</h2>
+          <div class="rowflex">
+            <span class="muted" id="playedCount"></span>
+            <button class="mini" id="saveHooks">Save hooks</button>
+            <button class="mini" id="resetRound">Reset round</button>
+          </div>
+        </div>
+        <div class="listwrap">
+          <table><thead><tr>
+            <th style="width:26px">#</th><th>Song</th><th style="width:62px">Start</th>
+            <th style="width:64px">Audio</th><th style="width:150px"></th>
+          </tr></thead><tbody id="songRows"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Verify a winner</h2>
+        <div class="rowflex">
+          <input type="number" id="cardNo" placeholder="Card #" min="1" style="width:110px">
+          <button class="primary" id="btnVerify">Check card</button>
+        </div>
+        <div id="verifyOut"></div>
+      </div>
+
+      <div class="card">
+        <h2>Audio library</h2>
+        <div class="drop" id="drop">
+          Drop your music folder or files here, or click to choose.<br>
+          <span style="font-size:12px">Files stay on this computer — nothing is uploaded.</span>
+        </div>
+        <input type="file" id="picker" multiple accept="audio/*" hidden webkitdirectory>
+        <input type="file" id="picker2" multiple accept="audio/*" hidden>
+        <input type="file" id="assignFile" accept="audio/*" hidden>
+        <div class="rowflex" style="margin-top:10px">
+          <button class="mini" id="pickFolder">Choose folder</button>
+          <button class="mini" id="pickFiles">Choose files</button>
+        </div>
+        <div class="muted" id="libStat" style="margin-top:10px">No audio loaded.</div>
+      </div>
+
+      <div class="card">
+        <h2>Round status</h2>
+        <div id="roundStat" class="muted"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<audio id="player"></audio>
+
+<script src="data/songs.js"></script>
+<script src="js/bingo.js"></script>
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
+
+var state = {
+  seed: "ANNIVERSARY-50",
+  round: "r1",
+  played: { r1:[], r2:[], r3:[], r4:[] },   // song indices, in the order played
+  hooks:  {},                               // "r1:12" -> seconds (overrides)
+  snip: 30,
+  cardFrom: 1,                              // the card numbers actually printed —
+  cardTo: 40                                // scanning beyond this invents winners
+
+};
+var library = {};      // songKey -> {file, url, name}
+var libNames = {};     // songKey -> filename (persisted so re-drops auto-match)
+var current = null;    // {round, idx}
+var timer = null;      // fade/progress interval
+var cutoff = null;     // hard stop, independent of the interval
+
+/* ---------- persistence ---------- */
+function lsKey(){ return "djbingo:" + state.seed; }
+function save(){
+  try{ localStorage.setItem(lsKey(), JSON.stringify({
+    played: state.played, hooks: state.hooks, snip: state.snip, libNames: libNames,
+    cardFrom: state.cardFrom, cardTo: state.cardTo })); }catch(e){}
+  try{ localStorage.setItem("djbingo:lastSeed", state.seed); }catch(e){}
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(lsKey());
+    if (raw){
+      var d = JSON.parse(raw);
+      if (d.played) state.played = Object.assign({r1:[],r2:[],r3:[],r4:[]}, d.played);
+      if (d.hooks) state.hooks = d.hooks;
+      if (d.snip) { state.snip = d.snip; $("snipLen").value = d.snip; }
+      if (d.libNames) libNames = d.libNames;
+      if (d.cardFrom) { state.cardFrom = d.cardFrom; $("cardFrom").value = d.cardFrom; }
+      if (d.cardTo)   { state.cardTo   = d.cardTo;   $("cardTo").value   = d.cardTo; }
+    } else {
+      state.played = {r1:[],r2:[],r3:[],r4:[]};
+    }
+  }catch(e){}
+}
+
+function hookFor(rk, idx){
+  var k = rk + ":" + idx;
+  return (k in state.hooks) ? state.hooks[k] : SONGS[rk].songs[idx][3];
+}
+function songKey(rk, idx){ return rk + ":" + idx; }
+
+/* ---------- audio matching ---------- */
+function norm(s){
+  return String(s).toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/&/g," and ")
+    .replace(/[^a-z0-9]+/g," ").trim();
+}
+var STOP = {"the":1,"a":1,"an":1,"of":1,"and":1,"in":1,"to":1,"it":1,"is":1,"on":1,"my":1};
+function tokens(s){ return norm(s).split(" ").filter(function(t){ return t && !STOP[t]; }); }
+
+function scoreMatch(title, artist, fileTokens){
+  var tt = tokens(title), at = tokens(artist);
+  if (!tt.length) return 0;
+  var hit = function(t){ return fileTokens.has(t); };
+  var covT = tt.filter(hit).length / tt.length;
+  var covA = at.length ? at.filter(hit).length / at.length : 0;
+
+  // Whole-word matching only, and most of the title must be present. Short
+  // titles ("Faith", "Kiss", "Low") are ambiguous on their own, so those also
+  // need the artist to line up before we'll claim a match.
+  if (covT < 0.75) return 0;
+  if (tt.length <= 2 && covA < 0.5) return 0;
+  return covT * 100 + covA * 50 + Math.min(tt.length, 5);
+}
+
+/* Assign files to songs one-to-one: a file is one recording, so it must not
+   satisfy two different squares. Three passes, most-trusted first:
+     0. filenames remembered from a previous session (incl. manual assignments)
+     1. strict fuzzy match (title + artist)
+     2. filename that is just the title, but only where it is unambiguous
+   Anything still unmatched gets an "Assign" button in the song list. */
+function matchLibrary(files){
+  var prepped = files.map(function(f){
+    return { file: f, toks: new Set(tokens(f.name.replace(/\.[a-z0-9]+$/i, ""))) };
+  });
+  var usedFile = {}, usedSong = {}, added = 0;
+
+  function bind(key, fi){
+    usedFile[fi] = usedSong[key] = 1;
+    var f = prepped[fi].file;
+    if (library[key] && library[key].url) URL.revokeObjectURL(library[key].url);
+    library[key] = { file: f, url: URL.createObjectURL(f), name: f.name };
+    libNames[key] = f.name;
+    added++;
+  }
+
+  /* pass 0 — exact filenames we bound before */
+  var byName = {};
+  prepped.forEach(function(pf, fi){ if (!(pf.file.name in byName)) byName[pf.file.name] = fi; });
+  Object.keys(libNames).forEach(function(key){
+    var fi = byName[libNames[key]];
+    if (fi !== undefined && !usedFile[fi] && !usedSong[key]) bind(key, fi);
+  });
+
+  /* pass 1 — strict fuzzy, best pairs first */
+  var pairs = [];
+  eachSong(function(rk, s, idx){
+    var key = songKey(rk, idx);
+    if (usedSong[key]) return;
+    prepped.forEach(function(pf, fi){
+      var sc = scoreMatch(s[0], s[1], pf.toks);
+      if (sc > 0) pairs.push({ key: key, fi: fi, score: sc });
+    });
+  });
+  pairs.sort(function(a, b){ return b.score - a.score; });
+  pairs.forEach(function(p){ if (!usedFile[p.fi] && !usedSong[p.key]) bind(p.key, p.fi); });
+
+  /* pass 2 — "Africa.mp3": every title word present, and nothing else it could be */
+  var full = [];
+  eachSong(function(rk, s, idx){
+    var key = songKey(rk, idx);
+    if (usedSong[key]) return;
+    var tt = tokens(s[0]);
+    if (!tt.length) return;
+    prepped.forEach(function(pf, fi){
+      if (usedFile[fi]) return;
+      if (tt.every(function(t){ return pf.toks.has(t); })) full.push({ key: key, fi: fi });
+    });
+  });
+  var songCount = {}, fileCount = {};
+  full.forEach(function(c){
+    songCount[c.key] = (songCount[c.key] || 0) + 1;
+    fileCount[c.fi]  = (fileCount[c.fi]  || 0) + 1;
+  });
+  full.forEach(function(c){
+    if (songCount[c.key] === 1 && fileCount[c.fi] === 1 && !usedFile[c.fi] && !usedSong[c.key]) {
+      bind(c.key, c.fi);
+    }
+  });
+
+  save();
+  return added;
+}
+
+function eachSong(fn){
+  ROUND_KEYS.forEach(function(rk){
+    SONGS[rk].songs.forEach(function(s, idx){ fn(rk, s, idx); });
+  });
+}
+
+/* Manual override for anything the matcher missed or got wrong. */
+var pendingAssign = null;
+function assignFile(rk, idx, file){
+  var key = songKey(rk, idx);
+  if (library[key] && library[key].url) URL.revokeObjectURL(library[key].url);
+  library[key] = { file: file, url: URL.createObjectURL(file), name: file.name };
+  libNames[key] = file.name;
+  save();
+  renderAll();
+}
+
+function haveAudio(rk, idx){ return !!library[songKey(rk, idx)]; }
+
+/* ---------- playback ---------- */
+var player = $("player");
+
+function clearTimers(){
+  if (timer){ clearInterval(timer); timer = null; }
+  if (cutoff){ clearTimeout(cutoff); cutoff = null; }
+}
+
+function stop(){
+  clearTimers();
+  player.pause();
+  current = null;
+  $("npBar").style.width = "0%";
+  $("npLeft").textContent = "";
+  $("npFrom").textContent = "—";
+  $("npBody").innerHTML = '<div class="np-idle">Stopped.</div>';
+  renderList();
+}
+
+function playSong(rk, idx, opts){
+  opts = opts || {};
+  var entry = library[songKey(rk, idx)];
+  var s = SONGS[rk].songs[idx];
+  var start = hookFor(rk, idx), len = state.snip;
+
+  current = { round: rk, idx: idx };
+  $("npBody").innerHTML =
+    '<div class="np-title">'+esc(s[0])+'</div><div class="np-artist">'+esc(s[1])+' · '+s[2]+'</div>';
+  $("npFrom").textContent = "from " + fmt(start);
+
+  if (!opts.noMark) markPlayed(rk, idx);
+
+  if (!entry){
+    $("npBody").innerHTML +=
+      '<div class="muted" style="margin-top:8px">No audio file matched — play this one from your own deck. '+
+      '<a href="'+ytLink(s)+'" target="_blank" rel="noopener">search YouTube</a></div>';
+    renderList(); renderRoundStat();
+    return;
+  }
+
+  clearTimers();
+  player.src = entry.url;
+  player.volume = 0;
+  player.currentTime = 0;
+
+  var begin = function(){
+    player.removeEventListener("loadedmetadata", begin);
+    var dur = isFinite(player.duration) ? player.duration : 999;
+    var st = Math.min(start, Math.max(0, dur - len - 1));
+    if (st < 0) st = 0;
+    player.currentTime = st;
+    player.play().catch(function(){
+      $("npBody").innerHTML += '<div class="muted" style="margin-top:8px">Browser blocked autoplay — click Replay.</div>';
+    });
+    var fadeIn = 0.8, fadeOut = 1.5;
+    var finish = function(){
+      clearTimers();
+      player.pause();
+      player.volume = 1;
+      $("npBar").style.width = "100%";
+      $("npLeft").textContent = "done";
+    };
+    // setInterval + a hard setTimeout, NOT requestAnimationFrame: rAF is frozen
+    // while the tab is in the background, which would leave the snippet silent
+    // and running forever if the DJ clicks away mid-song.
+    var tick = function(){
+      var el = player.currentTime - st;
+      var left = len - el;
+      if (left <= 0 || player.ended){ finish(); return; }
+      player.volume = Math.max(0, Math.min(1, Math.min(1, el / fadeIn, left / fadeOut)));
+      $("npBar").style.width = Math.min(100, (el / len) * 100) + "%";
+      $("npLeft").textContent = Math.ceil(left) + "s left";
+    };
+    timer = setInterval(tick, 50);
+    cutoff = setTimeout(finish, len * 1000 + 400);
+    player.addEventListener("ended", finish, { once: true });
+    tick();
+  };
+  if (player.readyState >= 1) begin();
+  else player.addEventListener("loadedmetadata", begin);
+
+  renderList(); renderRoundStat();
+}
+
+function ytLink(s){
+  return "https://www.youtube.com/results?search_query=" + encodeURIComponent(s[1] + " " + s[0]);
+}
+function fmt(sec){
+  sec = Math.max(0, Math.round(sec));
+  return Math.floor(sec/60) + ":" + String(sec%60).padStart(2,"0");
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+/* ---------- played tracking ---------- */
+function markPlayed(rk, idx){
+  if (state.played[rk].indexOf(idx) < 0){ state.played[rk].push(idx); save(); }
+}
+function unmarkPlayed(rk, idx){
+  var i = state.played[rk].indexOf(idx);
+  if (i >= 0){ state.played[rk].splice(i,1); save(); }
+}
+function nextUnplayed(rk){
+  var order = suggestedPlayOrder(rk, state.seed);
+  for (var i=0;i<order.length;i++){ if (state.played[rk].indexOf(order[i]) < 0) return order[i]; }
+  return null;
+}
+
+/* ---------- rendering ---------- */
+function renderTabs(){
+  var t = $("tabs"); t.innerHTML = "";
+  ROUND_KEYS.forEach(function(rk){
+    var d = document.createElement("div");
+    d.className = "tab" + (rk===state.round ? " active":"");
+    d.style.color = ACC[rk];
+    d.innerHTML = '<span class="dot" style="background:'+ACC[rk]+'"></span>'+
+      '<span style="color:var(--ink)">'+esc(SONGS[rk].label)+'</span>'+
+      '<span class="cnt">'+state.played[rk].length+'/'+SONGS[rk].songs.length+'</span>';
+    d.onclick = function(){ state.round = rk; stopQuiet(); renderAll(); };
+    t.appendChild(d);
+  });
+}
+function stopQuiet(){ clearTimers(); player.pause(); current=null; }
+
+function renderList(){
+  var rk = state.round, pool = SONGS[rk].songs, tb = $("songRows");
+  var order = suggestedPlayOrder(rk, state.seed);
+  var nxt = nextUnplayed(rk);
+  var rank = {}; order.forEach(function(idx,i){ rank[idx] = i+1; });
+
+  tb.innerHTML = "";
+  pool.map(function(s,idx){ return {s:s, idx:idx}; })
+      .sort(function(a,b){ return rank[a.idx]-rank[b.idx]; })
+      .forEach(function(row){
+    var idx = row.idx, s = row.s;
+    var isPlayed = state.played[rk].indexOf(idx) >= 0;
+    var tr = document.createElement("tr");
+    tr.className = (isPlayed?"played ":"") + (current && current.round===rk && current.idx===idx ? "playing ":"") +
+                   (idx===nxt ? "next":"");
+    tr.innerHTML =
+      '<td class="sn">'+rank[idx]+'</td>'+
+      '<td><div class="st">'+esc(s[0])+'</div><div class="sa">'+esc(s[1])+' · '+s[2]+'</div></td>'+
+      '<td><input class="hook" type="number" min="0" value="'+hookFor(rk,idx)+'" data-h="'+idx+'"></td>'+
+      '<td><span class="src '+(haveAudio(rk,idx)?"file":"none")+'">'+(haveAudio(rk,idx)?"file":"none")+'</span></td>'+
+      '<td><button class="mini" data-p="'+idx+'">Play</button> '+
+          '<button class="mini" data-t="'+idx+'">'+(isPlayed?"Unmark":"Mark")+'</button> '+
+          '<button class="mini" data-f="'+idx+'" title="Pick the audio file for this song">'+
+          (haveAudio(rk,idx)?"↻":"Assign")+'</button></td>';
+    tb.appendChild(tr);
+  });
+
+  tb.querySelectorAll("[data-p]").forEach(function(b){
+    b.onclick = function(){ playSong(rk, +b.dataset.p); };
+  });
+  tb.querySelectorAll("[data-t]").forEach(function(b){
+    b.onclick = function(){
+      var i = +b.dataset.t;
+      if (state.played[rk].indexOf(i) >= 0) unmarkPlayed(rk,i); else markPlayed(rk,i);
+      renderAll();
+    };
+  });
+  tb.querySelectorAll("[data-f]").forEach(function(b){
+    b.onclick = function(){ pendingAssign = { rk: rk, idx: +b.dataset.f }; $("assignFile").click(); };
+    if (haveAudio(rk, +b.dataset.f)) b.title = "Audio: " + library[songKey(rk, +b.dataset.f)].name;
+  });
+  tb.querySelectorAll("[data-h]").forEach(function(inp){
+    inp.onchange = function(){ state.hooks[songKey(rk, +inp.dataset.h)] = Math.max(0, +inp.value||0); save(); };
+  });
+
+  $("listTitle").textContent = SONGS[rk].label;
+  $("playedCount").textContent = state.played[rk].length + " played";
+}
+
+function renderRoundStat(){
+  var rk = state.round;
+  var played = state.played[rk];
+  var winners = [];
+  var from = state.cardFrom, to = state.cardTo;
+  for (var n=from; n<=to; n++){
+    var w = winningLines(buildCard(rk, n, state.seed), played);
+    if (w.length) winners.push({no:n, at:w[0].completedAt, line:w[0].name});
+  }
+  winners.sort(function(a,b){ return a.at - b.at || a.no - b.no; });
+  var html = "<div>Songs played: <b style='color:var(--ink)'>"+played.length+"</b> of "+SONGS[rk].songs.length+"</div>";
+  if (!winners.length){
+    html += "<div style='margin-top:6px'>No card in #"+from+"–"+to+" has bingo yet.</div>";
+  } else {
+    var first = winners[0].at;
+    var tied = winners.filter(function(w){ return w.at === first; });
+    html += "<div style='margin-top:8px;color:var(--good);font-weight:700'>"+
+            winners.length+" card(s) now have bingo.</div>"+
+            "<div style='margin-top:4px'>Earliest: card"+(tied.length>1?"s":"")+" #"+
+            tied.map(function(w){return w.no;}).join(", #")+
+            " (completed on song "+(first+1)+")</div>";
+    if (tied.length>1) html += "<div style='margin-top:4px;color:var(--accent)'>Tie — see tiebreak in the README.</div>";
+  }
+  $("roundStat").innerHTML = html;
+}
+
+function renderVerify(){
+  var rk = state.round, n = parseInt($("cardNo").value,10);
+  var out = $("verifyOut");
+  if (!n || n < 1){ out.innerHTML = '<div class="muted" style="margin-top:10px">Enter the card number printed in the top-right corner.</div>'; return; }
+
+  var outOfRange = (n < state.cardFrom || n > state.cardTo);
+  var grid = buildCard(rk, n, state.seed);
+  var played = state.played[rk];
+  var playedSet = new Set(played);
+  var wins = winningLines(grid, played);
+  var winCells = {};
+  if (wins.length) wins[0].cells.forEach(function(c){ winCells[c[0]+","+c[1]] = 1; });
+
+  var pool = SONGS[rk].songs, cells = "";
+  for (var r=0;r<5;r++) for (var c=0;c<5;c++){
+    var idx = grid[r][c];
+    if (idx === FREE){ cells += '<div class="vcell free'+(winCells[r+","+c]?" win":"")+'"><div class="vt">FREE</div></div>'; continue; }
+    var s = pool[idx], on = playedSet.has(idx);
+    cells += '<div class="vcell '+(winCells[r+","+c]?"win":(on?"marked":""))+'">'+
+             '<div class="vt">'+esc(s[0])+'</div></div>';
+  }
+
+  var marks = marksOnCard(grid, playedSet);
+  var v;
+  if (wins.length){
+    v = '<div class="verdict yes">✓ BINGO CONFIRMED — card #'+n+'<small>'+
+        wins[0].name+' completed on song #'+(wins[0].completedAt+1)+' ("'+
+        esc(pool[played[wins[0].completedAt]][0])+'"). '+
+        marks+' of 25 squares marked. '+
+        (wins.length>1 ? wins.length+' winning lines on this card.' : '')+'</small></div>';
+  } else {
+    var best = 0;
+    LINES.forEach(function(L){
+      var c2 = 0;
+      L.cells.forEach(function(cc){ var i2=grid[cc[0]][cc[1]]; if (i2===FREE||playedSet.has(i2)) c2++; });
+      if (c2>best) best = c2;
+    });
+    v = '<div class="verdict no">✗ NOT A WINNER — card #'+n+'<small>Best line has '+best+
+        ' of 5 marked. '+marks+' of 25 squares marked overall.</small></div>';
+  }
+
+  var range = outOfRange
+    ? '<div class="warnbar" style="margin:12px 0 0">Card #'+n+' is outside the printed range ('+
+      state.cardFrom+'\u2013'+state.cardTo+'). Check the number on the card.</div>'
+    : '';
+  out.innerHTML = range + '<div class="muted" style="margin-top:12px">'+esc(SONGS[rk].label)+
+                  ' · card #'+n+' · seed '+esc(state.seed)+'</div>'+
+                  '<div class="vgrid">'+cells+'</div>' + v;
+}
+
+function renderAll(){ renderTabs(); renderList(); renderRoundStat(); renderVerify(); }
+
+/* ---------- events ---------- */
+$("btnNext").onclick = function(){
+  var i = nextUnplayed(state.round);
+  if (i === null){ alert("Every song in this round has been played."); return; }
+  playSong(state.round, i);
+};
+$("btnStop").onclick = stop;
+$("btnReplay").onclick = function(){
+  if (current) playSong(current.round, current.idx, {noMark:true});
+};
+$("btnVerify").onclick = renderVerify;
+$("cardNo").addEventListener("keydown", function(e){ if (e.key === "Enter") renderVerify(); });
+
+$("snipLen").onchange = function(){ state.snip = Math.max(5, Math.min(90, +this.value||30)); save(); };
+
+$("cardFrom").onchange = function(){ state.cardFrom = Math.max(1, +this.value||1); save(); renderAll(); };
+$("cardTo").onchange   = function(){ state.cardTo   = Math.max(1, +this.value||40); save(); renderAll(); };
+
+$("seed").onchange = function(){
+  state.seed = this.value.trim() || "ANNIVERSARY-50";
+  load(); renderAll();
+};
+
+$("resetRound").onclick = function(){
+  if (!confirm("Clear all played songs for " + SONGS[state.round].label + "?")) return;
+  state.played[state.round] = []; save(); stopQuiet(); renderAll();
+};
+$("saveHooks").onclick = function(){ save(); alert("Snippet start times saved in this browser."); };
+
+/* config import */
+$("loadCfg").onclick = function(){ $("cfgFile").click(); };
+$("cfgFile").onchange = function(){
+  var f = this.files[0]; if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function(){
+    try{
+      var d = JSON.parse(fr.result);
+      if (d.seed){
+        state.seed = d.seed; $("seed").value = d.seed;
+        load();
+        if (d.cardFrom){ state.cardFrom = d.cardFrom; $("cardFrom").value = d.cardFrom; }
+        if (d.cardTo){   state.cardTo   = d.cardTo;   $("cardTo").value   = d.cardTo; }
+        save(); renderAll();
+        alert("Loaded seed " + d.seed + " (cards " + state.cardFrom + "\u2013" + state.cardTo + ").");
+      }
+    }catch(e){ alert("That file isn't a DJ Bingo config."); }
+  };
+  fr.readAsText(f);
+};
+
+/* audio library */
+function ingest(fileList){
+  var files = [].slice.call(fileList).filter(function(f){
+    return /\.(mp3|m4a|aac|wav|ogg|oga|flac|opus|webm)$/i.test(f.name); });
+  if (!files.length){ $("libStat").textContent = "No audio files found in that drop."; return; }
+  var n = matchLibrary(files);
+  var total = 0;
+  ROUND_KEYS.forEach(function(rk){ SONGS[rk].songs.forEach(function(_,i){ if (haveAudio(rk,i)) total++; }); });
+  $("libStat").innerHTML = files.length+" audio file(s) read · <b style='color:var(--good)'>"+total+
+    "</b> of 160 songs matched." + (total<160 ? " Unmatched songs show <span class='src none'>none</span> in the list." : "");
+  renderAll();
+}
+$("assignFile").onchange = function(){
+  var f = this.files[0];
+  if (f && pendingAssign) assignFile(pendingAssign.rk, pendingAssign.idx, f);
+  pendingAssign = null; this.value = "";
+};
+$("pickFolder").onclick = function(){ $("picker").click(); };
+$("pickFiles").onclick = function(){ $("picker2").click(); };
+$("picker").onchange = function(){ ingest(this.files); };
+$("picker2").onchange = function(){ ingest(this.files); };
+$("drop").onclick = function(){ $("picker2").click(); };
+["dragenter","dragover"].forEach(function(ev){
+  $("drop").addEventListener(ev, function(e){ e.preventDefault(); this.classList.add("over"); });
+});
+["dragleave","drop"].forEach(function(ev){
+  $("drop").addEventListener(ev, function(e){ e.preventDefault(); this.classList.remove("over"); });
+});
+$("drop").addEventListener("drop", function(e){
+  e.preventDefault();
+  if (e.dataTransfer.files && e.dataTransfer.files.length) ingest(e.dataTransfer.files);
+});
+
+/* keyboard */
+document.addEventListener("keydown", function(e){
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+  if (e.key === " "){ e.preventDefault(); if (current && !player.paused) stop(); else $("btnNext").click(); }
+  else if (e.key.toLowerCase() === "n"){ e.preventDefault(); $("btnNext").click(); }
+  else if (e.key.toLowerCase() === "r"){ e.preventDefault(); $("btnReplay").click(); }
+});
+
+/* ---------- boot ---------- */
+try{ var last = localStorage.getItem("djbingo:lastSeed"); if (last){ state.seed = last; } }catch(e){}
+$("seed").value = state.seed;
+load();
+renderAll();
+})();
+</script>
+</body>
+</html>

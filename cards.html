@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJ Bingo — Card Generator</title>
+<style>
+  :root{
+    --ink:#1b1a17; --muted:#6b6559; --rule:#d8d0c0; --paper:#fff;
+    --r1:#b7791f; --r2:#0f766e; --r3:#6d28d9; --r4:#be123c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       color:var(--ink);background:#f3efe7}
+  .panel{max-width:960px;margin:0 auto;padding:28px 24px 40px}
+  h1{font-size:26px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 24px}
+  fieldset{border:1px solid var(--rule);border-radius:10px;background:#fff;padding:16px 18px;margin:0 0 16px}
+  legend{font-weight:600;padding:0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+  input[type=text],input[type=number],textarea{width:100%;padding:8px 10px;border:1px solid var(--rule);
+       border-radius:7px;font:inherit;background:#fdfcfa}
+  textarea{min-height:110px;resize:vertical;font-size:13px}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:150px}
+  .checks{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px}
+  .checks label{display:flex;align-items:center;gap:6px;font-weight:500;margin:0}
+  button{font:inherit;font-weight:600;padding:10px 18px;border-radius:8px;border:1px solid var(--ink);
+       background:var(--ink);color:#fff;cursor:pointer}
+  button.ghost{background:#fff;color:var(--ink)}
+  button:hover{opacity:.88}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .note{font-size:13px;color:var(--muted);margin-top:10px}
+  .warn{background:#fff6e5;border:1px solid #e8c37a;color:#7a5307;padding:10px 12px;border-radius:8px;
+       font-size:13px;margin-top:10px}
+  .ok{background:#eef7ef;border:1px solid #a8cfae;color:#245c2e;padding:10px 12px;border-radius:8px;
+       font-size:13px;margin-top:10px}
+  #sheets{display:none}
+
+  /* ---------- printable cards ---------- */
+  .card{background:var(--paper);border:2px solid var(--accent);border-radius:10px;padding:10px 12px 8px;
+        display:flex;flex-direction:column;break-inside:avoid;overflow:hidden}
+  .card-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;
+        border-bottom:2px solid var(--accent);padding-bottom:5px;margin-bottom:6px}
+  .occasion{font-size:8.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .round{font-size:15pt;font-weight:800;color:var(--accent);line-height:1.1}
+  .who{text-align:right}
+  .who .num{font-size:19pt;font-weight:800;line-height:1}
+  .who .name{font-size:9.5pt;color:var(--muted);max-width:2.4in;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bingo-hdr{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-bottom:3px}
+  .bingo-hdr div{text-align:center;font-size:13pt;font-weight:800;color:#fff;background:var(--accent);
+        border-radius:4px;padding:1px 0;letter-spacing:.1em}
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;flex:1}
+  .cell{border:1px solid var(--rule);border-radius:4px;padding:3px 4px;display:flex;flex-direction:column;
+        justify-content:center;align-items:center;text-align:center;overflow:hidden}
+  .cell .t{font-weight:700;line-height:1.12;overflow-wrap:anywhere;hyphens:auto}
+  .cell .a{color:var(--muted);line-height:1.1;margin-top:2px;overflow-wrap:anywhere}
+  .cell.free{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .cell.free .t{font-size:11pt;letter-spacing:.06em}
+  .cell.free .a{color:rgba(255,255,255,.85)}
+  .card-foot{display:flex;justify-content:space-between;font-size:6.5pt;color:var(--muted);
+        margin-top:5px;padding-top:3px;border-top:1px solid var(--rule)}
+
+  /* text sizes — two cards per page */
+  .sheet.two .cell .t{font-size:8.2pt}
+  .sheet.two .cell .a{font-size:6.6pt}
+  .sheet.two .cell .t.long{font-size:7.2pt}
+  .sheet.two .cell .t.xlong{font-size:6.6pt}
+  /* text sizes — one card per page (large print) */
+  .sheet.one .cell .t{font-size:13pt}
+  .sheet.one .cell .a{font-size:9.5pt}
+  .sheet.one .cell .t.long{font-size:11.5pt}
+  .sheet.one .cell .t.xlong{font-size:10pt}
+  .sheet.one .round{font-size:22pt}
+  .sheet.one .who .num{font-size:30pt}
+  .sheet.one .who .name{font-size:13pt;max-width:3.4in}
+  .sheet.one .occasion{font-size:11pt}
+  .sheet.one .bingo-hdr div{font-size:20pt}
+  .sheet.one .cell.free .t{font-size:16pt}
+  .sheet.one .card-foot{font-size:8pt}
+
+  .sheet{display:flex;flex-direction:column;gap:8px;break-after:page;page-break-after:always}
+  .sheet.one .card{height:10.05in}
+  .sheet.two .card{height:4.92in}
+
+  @media screen{
+    #sheets{display:block;max-width:960px;margin:0 auto 60px;padding:0 24px}
+    .sheet{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.13);margin:0 0 22px;padding:.35in;
+           width:8.5in;zoom:var(--preview-zoom,1)}
+  }
+  @page{size:letter portrait;margin:.35in}
+  @media print{
+    .panel,.no-print{display:none!important}
+    #sheets{display:block!important;padding:0;margin:0;max-width:none}
+    .sheet{box-shadow:none;margin:0;padding:0;width:auto;zoom:1!important}
+    body{background:#fff}
+    .sheet:last-child{break-after:auto;page-break-after:auto}
+  }
+</style>
+</head>
+<body>
+
+<div class="panel no-print">
+  <h1>DJ Bingo — Card Generator</h1>
+  <p class="sub">Prints numbered 5&times;5 song cards. Cards are rebuilt from the master seed, so the DJ console
+     can verify any winner exactly.</p>
+
+  <fieldset>
+    <legend>Game</legend>
+    <div class="row">
+      <div>
+        <label for="seed">Master seed <span style="font-weight:400;color:var(--muted)">(must match the DJ console)</span></label>
+        <input type="text" id="seed" value="ANNIVERSARY-50">
+      </div>
+      <div>
+        <label for="occasion">Occasion line</label>
+        <input type="text" id="occasion" value="Bob &amp; Carol — 50th Anniversary">
+      </div>
+    </div>
+    <div class="row">
+      <div><label for="from">First card #</label><input type="number" id="from" value="1" min="1"></div>
+      <div><label for="to">Last card #</label><input type="number" id="to" value="40" min="1"></div>
+    </div>
+    <label>Rounds to print</label>
+    <div class="checks" id="roundChecks"></div>
+    <label style="margin-top:14px">Layout</label>
+    <div class="checks">
+      <label><input type="radio" name="per" value="2" checked> 2 cards per page <span style="color:var(--muted)">(recommended — duplex = 1 sheet per guest)</span></label>
+      <label><input type="radio" name="per" value="1"> 1 per page (large print)</label>
+    </div>
+    <div class="checks" style="margin-top:8px">
+      <label><input type="checkbox" id="groupByGuest" checked> Group by guest <span style="color:var(--muted)">(all 4 rounds together — best for duplex)</span></label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Guest names <span style="text-transform:none;font-weight:400">(optional)</span></legend>
+    <label for="names">One name per line — line 1 becomes card #1. Blank lines get "Guest #N".</label>
+    <textarea id="names" placeholder="Aunt Marie&#10;Uncle Ray&#10;Jenny &amp; Tom"></textarea>
+  </fieldset>
+
+  <fieldset>
+    <legend>Seed check</legend>
+    <p class="note" style="margin-top:0">Because every card is derived from the seed, the whole game can be simulated
+       before you print. A good seed gives each round roughly 9&ndash;15 songs before the first bingo.</p>
+    <div class="actions">
+      <button class="ghost" id="checkSeed">Simulate this seed</button>
+      <button class="ghost" id="rollSeed">Find a well-paced seed</button>
+    </div>
+    <div id="seedResult"></div>
+  </fieldset>
+
+  <div class="actions">
+    <button id="gen">Generate cards</button>
+    <button class="ghost" id="print">Print</button>
+    <button class="ghost" id="exportCfg">Download game config</button>
+  </div>
+  <div id="status" class="note"></div>
+</div>
+
+<div id="sheets"></div>
+
+<script src="data/songs.js"></script>
+<script src="js/bingo.js"></script>
+<script>
+(function(){
+  var ACCENT = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* round checkboxes */
+  ROUND_KEYS.forEach(function(k){
+    var l = document.createElement("label");
+    l.innerHTML = '<input type="checkbox" value="'+k+'" checked> '+SONGS[k].label;
+    $("roundChecks").appendChild(l);
+  });
+
+  function selectedRounds(){
+    return [].slice.call($("roundChecks").querySelectorAll("input:checked")).map(function(i){return i.value;});
+  }
+  function cfg(){
+    return {
+      seed: $("seed").value.trim() || "ANNIVERSARY-50",
+      occasion: $("occasion").value.trim(),
+      from: Math.max(1, parseInt($("from").value,10) || 1),
+      to:   Math.max(1, parseInt($("to").value,10) || 40),
+      per:  document.querySelector('input[name=per]:checked').value,
+      group: $("groupByGuest").checked,
+      names: $("names").value.split("\n")
+    };
+  }
+  function nameFor(names, n){
+    var v = (names[n-1] || "").trim();
+    return v || ("Guest #" + n);
+  }
+  function sizeClass(title){
+    if (title.length > 26) return "xlong";
+    if (title.length > 16) return "long";
+    return "";
+  }
+
+  function cardEl(roundKey, cardNo, c){
+    var grid = buildCard(roundKey, cardNo, c.seed);
+    var pool = SONGS[roundKey].songs;
+    var card = document.createElement("div");
+    card.className = "card";
+    card.style.setProperty("--accent", ACCENT[roundKey]);
+
+    var cells = "";
+    for (var r=0;r<5;r++){
+      for (var col=0;col<5;col++){
+        var idx = grid[r][col];
+        if (idx === FREE){
+          cells += '<div class="cell free"><div class="t">FREE</div><div class="a">50 years!</div></div>';
+        } else {
+          var s = pool[idx];
+          cells += '<div class="cell"><div class="t '+sizeClass(s[0])+'">'+esc(s[0])+
+                   '</div><div class="a">'+esc(s[1])+'</div></div>';
+        }
+      }
+    }
+    card.innerHTML =
+      '<div class="card-head">'+
+        '<div><div class="occasion">'+esc(c.occasion)+'</div>'+
+        '<div class="round">'+esc(SONGS[roundKey].label)+'</div></div>'+
+        '<div class="who"><div class="num">#'+cardNo+'</div>'+
+        '<div class="name">'+esc(nameFor(c.names, cardNo))+'</div></div>'+
+      '</div>'+
+      '<div class="bingo-hdr"><div>B</div><div>I</div><div>N</div><div>G</div><div>O</div></div>'+
+      '<div class="grid">'+cells+'</div>'+
+      '<div class="card-foot"><span>Mark a square when you hear the song. Five in a row wins.</span>'+
+      '<span>'+esc(c.seed)+' &middot; '+roundKey.toUpperCase()+' &middot; card '+cardNo+'</span></div>';
+    return card;
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(m){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+  function generate(){
+    var c = cfg(), rounds = selectedRounds();
+    var out = $("sheets");
+    out.innerHTML = "";
+    if (!rounds.length){ $("status").textContent = "Pick at least one round."; return; }
+    if (c.to < c.from){ $("status").textContent = "Last card # must be at least the first."; return; }
+
+    var per = c.per === "1" ? 1 : 2;
+    var jobs = [];                       // ordered list of [roundKey, cardNo]
+    if (c.group){
+      for (var n=c.from;n<=c.to;n++) rounds.forEach(function(rk){ jobs.push([rk,n]); });
+    } else {
+      rounds.forEach(function(rk){ for (var n=c.from;n<=c.to;n++) jobs.push([rk,n]); });
+    }
+
+    var sheet = null;
+    jobs.forEach(function(job, i){
+      if (i % per === 0){
+        sheet = document.createElement("div");
+        sheet.className = "sheet " + (per===1 ? "one" : "two");
+        out.appendChild(sheet);
+      }
+      sheet.appendChild(cardEl(job[0], job[1], c));
+    });
+
+    var guests = c.to - c.from + 1;
+    var sheets = Math.ceil(jobs.length / per);
+    $("status").innerHTML = "<b>"+jobs.length+"</b> cards for "+guests+" guests across "+rounds.length+
+      " round(s) &mdash; <b>"+sheets+"</b> printed page(s)" +
+      (per===2 ? ", or <b>"+Math.ceil(sheets/2)+"</b> sheet(s) double-sided." : ".");
+    scalePreview();
+  }
+
+  /* preview scaling so 8.5in pages fit the browser column.
+     `zoom` (not `transform`) because it reflows: the page keeps its real height
+     instead of overlapping the sheets below it. Reset to 1 for printing. */
+  function scalePreview(){
+    var avail = Math.min(document.body.clientWidth - 60, 912);
+    var scale = Math.min(1, avail / (8.5 * 96));
+    document.documentElement.style.setProperty("--preview-zoom", scale);
+  }
+  window.addEventListener("resize", scalePreview);
+
+  /* ---- seed simulation ---- */
+  function simulateSeed(seed, from, to, rounds){
+    var res = [];
+    rounds.forEach(function(rk){
+      var cards = [];
+      for (var n=from;n<=to;n++) cards.push({no:n, grid:buildCard(rk,n,seed)});
+      var order = suggestedPlayOrder(rk, seed), k, winners = [];
+      for (k=1;k<=order.length;k++){
+        var play = order.slice(0,k);
+        winners = cards.filter(function(c){ return winningLines(c.grid, play).length; });
+        if (winners.length) break;
+      }
+      res.push({round:rk, songs:k, winners:winners.map(function(w){return w.no;})});
+    });
+    return res;
+  }
+
+  function renderSim(seed, res){
+    var bad = res.filter(function(r){ return r.songs < 8 || r.songs > 16; });
+    var html = res.map(function(r){
+      return "<div><b>"+SONGS[r.round].label+"</b>: first bingo after <b>"+r.songs+
+             "</b> songs &mdash; card"+(r.winners.length>1?"s":"")+" #"+r.winners.join(", #")+
+             (r.winners.length>1?" <em>(tie &mdash; see tiebreak in README)</em>":"")+"</div>";
+    }).join("");
+    $("seedResult").innerHTML = '<div class="'+(bad.length?"warn":"ok")+'"><div style="margin-bottom:6px">'+
+      'Seed <b>'+esc(seed)+'</b>'+(bad.length? " &mdash; one or more rounds are outside the comfortable 8&ndash;16 song range."
+                                             : " &mdash; all rounds well paced.")+'</div>'+html+
+      '<div style="margin-top:6px;opacity:.8">Assumes the DJ follows the suggested play order in the console.</div></div>';
+  }
+
+  $("checkSeed").onclick = function(){
+    var c = cfg(), rounds = selectedRounds();
+    if (!rounds.length){ $("seedResult").innerHTML = '<div class="warn">Pick at least one round.</div>'; return; }
+    renderSim(c.seed, simulateSeed(c.seed, c.from, c.to, rounds));
+  };
+
+  $("rollSeed").onclick = function(){
+    var c = cfg(), rounds = selectedRounds();
+    if (!rounds.length){ $("seedResult").innerHTML = '<div class="warn">Pick at least one round.</div>'; return; }
+    var base = (c.seed || "SEED").replace(/-\d+$/, "");
+    for (var i=1;i<=400;i++){
+      var cand = base + "-" + i;
+      var res = simulateSeed(cand, c.from, c.to, rounds);
+      var good = res.every(function(r){ return r.songs>=10 && r.songs<=14 && r.winners.length===1; });
+      if (good){ $("seed").value = cand; renderSim(cand, res); return; }
+    }
+    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries hit 10&ndash;14 songs with a single winner in every round. Try a different base seed.</div>';
+  };
+
+  $("exportCfg").onclick = function(){
+    var c = cfg();
+    var data = { seed:c.seed, occasion:c.occasion, cardFrom:c.from, cardTo:c.to,
+                 names:c.names.map(function(s){return s.trim();}), generated:new Date().toISOString() };
+    var blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "dj-bingo-config.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  /* URL parameters, so a single lost card is a one-liner:
+     cards.html?from=17&to=17&rounds=r2  */
+  (function applyParams(){
+    var q = new URLSearchParams(location.search);
+    if (!q.toString()) return;
+    if (q.get("seed")) $("seed").value = q.get("seed");
+    if (q.get("occasion")) $("occasion").value = q.get("occasion");
+    if (q.get("from")) $("from").value = q.get("from");
+    if (q.get("to")) $("to").value = q.get("to");
+    if (q.get("per")) {
+      var r = document.querySelector('input[name=per][value="'+q.get("per")+'"]');
+      if (r) r.checked = true;
+    }
+    if (q.get("group")) $("groupByGuest").checked = q.get("group") !== "0";
+    if (q.get("rounds")) {
+      var want = q.get("rounds").split(",");
+      $("roundChecks").querySelectorAll("input").forEach(function(i){
+        i.checked = want.indexOf(i.value) >= 0;
+      });
+    }
+  })();
+
+  $("gen").onclick = generate;
+  $("print").onclick = function(){
+    if (!$("sheets").children.length) generate();
+    setTimeout(function(){ window.print(); }, 60);
+  };
+
+  generate();
+})();
+</script>
+</body>
+</html>
