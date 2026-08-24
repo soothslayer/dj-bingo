@@ -104,9 +104,40 @@ Whatever doesn't match shows `none` in the song list with an **Assign** button �
 it and pick the file yourself. Manual picks are remembered by filename, so next time
 you drop the folder they match automatically.
 
-**Don't have the music?** Songs without a file still work: the console shows the title
-and a YouTube search link, and you play it from your own deck, phone, or streaming app.
-The bingo logic doesn't care where the sound comes from.
+**Don't have the music?** Songs with no local file fall back to a free 30-second
+preview from Apple's public iTunes Search API — no account, no API key, no
+subscription. Since the game plays 30-second snippets anyway, a preview is a
+complete round.
+
+Previews are fetched **as you play**, not up front. When a song starts, the console
+looks up the *next* one in the background, so by the time you hit **Play next** it is
+already in hand. A round only plays 10–15 songs, so a whole night is about 50 lookups
+spread minutes apart — well inside Apple's rate limit, and nothing is fetched for a
+song nobody hears.
+
+Three things to know:
+
+- **It needs internet during the party**, not just before. The previews stream from
+  Apple's servers, so pre-fetching does *not* make you offline-proof — only local
+  files do that. If the venue wifi is a rumour, bring the files.
+- **The START column stops applying** to preview-backed songs. Apple picks the
+  30 seconds, not you — usually the chorus, but you can't tune it. Assign a local file
+  to any song where the preview lands badly.
+- **A local file always wins over a preview**, so you can mix the two freely: drop the
+  music you own, let the rest fall back. The list shows which is which — `file`,
+  `itunes`, or `none`.
+
+**Pre-fetch all (optional)** resolves all 160 up front. The only reason to bother is
+to find out in advance which songs Apple has no match for, so you can source those
+yourself. It takes about 8 minutes because Apple rate-limits to roughly 20 requests a
+minute and enforces it harshly — go over and it returns 403 for your whole connection
+for several minutes. Run it at home, keep the tab visible (browsers throttle timers in
+background tabs), and if you do get 403s, wait ~15 minutes and click again — progress
+is saved and it picks up where it stopped.
+
+Songs that are still `none` work fine: the console shows the title and a YouTube search
+link, and you play it from your own deck, phone, or streaming app. The bingo logic
+doesn't care where the sound comes from.
 
 ### 7. Check the snippet start times
 
