@@ -65,6 +65,7 @@
   .src{font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap}
   .src.file{background:rgba(63,191,107,.18);color:var(--good)}
   .src.none{background:rgba(224,83,79,.15);color:var(--bad)}
+  .src.itunes{background:rgba(90,150,255,.18);color:#7fb0ff}
   .listwrap{max-height:62vh;overflow:auto}
   .mini{padding:4px 9px;font-size:12px;font-weight:600}
 
@@ -175,6 +176,25 @@
           <button class="mini" id="pickFiles">Choose files</button>
         </div>
         <div class="muted" id="libStat" style="margin-top:10px">No audio loaded.</div>
+
+        <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:12px">
+          <div class="rowflex">
+            <button class="mini" id="btnFetchPrev">Pre-fetch all (optional)</button>
+            <button class="mini" id="btnStopPrev" hidden>Stop</button>
+            <button class="mini" id="btnClearPrev" hidden>Clear</button>
+          </div>
+          <div class="muted" style="margin-top:8px">
+            Songs with no local file fall back to a free 30-second iTunes preview,
+            fetched <b>as you play</b> — the next song is warmed up while the current
+            one runs, so there is no wait. Needs internet during the party.
+          </div>
+          <div class="muted" style="margin-top:6px;font-size:11px">
+            Pre-fetching is only worth it to see in advance which songs Apple has no
+            match for. It takes ~8 minutes (Apple's rate limit), so run it at home and
+            keep this tab visible.
+          </div>
+          <div class="muted" id="prevStat" style="margin-top:8px"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -207,6 +227,8 @@ var state = {
 };
 var library = {};      // songKey -> {file, url, name}
 var libNames = {};     // songKey -> filename (persisted so re-drops auto-match)
+var previews = {};     // songKey -> {url, name} from iTunes; persisted, always
+                       // LOWER precedence than a local file (see audioFor)
 var current = null;    // {round, idx}
 var timer = null;      // fade/progress interval
 var cutoff = null;     // hard stop, independent of the interval
@@ -216,7 +238,7 @@ function lsKey(){ return "djbingo:" + state.seed; }
 function save(){
   try{ localStorage.setItem(lsKey(), JSON.stringify({
     played: state.played, hooks: state.hooks, snip: state.snip, libNames: libNames,
-    cardFrom: state.cardFrom, cardTo: state.cardTo })); }catch(e){}
+    previews: previews, cardFrom: state.cardFrom, cardTo: state.cardTo })); }catch(e){}
   try{ localStorage.setItem("djbingo:lastSeed", state.seed); }catch(e){}
 }
 function load(){
@@ -228,6 +250,7 @@ function load(){
       if (d.hooks) state.hooks = d.hooks;
       if (d.snip) { state.snip = d.snip; $("snipLen").value = d.snip; }
       if (d.libNames) libNames = d.libNames;
+      if (d.previews) previews = d.previews;
       if (d.cardFrom) { state.cardFrom = d.cardFrom; $("cardFrom").value = d.cardFrom; }
       if (d.cardTo)   { state.cardTo   = d.cardTo;   $("cardTo").value   = d.cardTo; }
     } else {
@@ -353,7 +376,17 @@ function assignFile(rk, idx, file){
   renderAll();
 }
 
-function haveAudio(rk, idx){ return !!library[songKey(rk, idx)]; }
+/* A local file always wins over an iTunes preview: the DJ chose it deliberately,
+   and it is the full track rather than Apple's fixed 30-second excerpt. */
+function audioFor(rk, idx){
+  var k = songKey(rk, idx);
+  return library[k] || previews[k] || null;
+}
+function audioKind(rk, idx){
+  var k = songKey(rk, idx);
+  return library[k] ? "file" : (previews[k] ? "itunes" : "none");
+}
+function haveAudio(rk, idx){ return !!audioFor(rk, idx); }
 
 /* ---------- playback ---------- */
 var player = $("player");
@@ -374,26 +407,69 @@ function stop(){
   renderList();
 }
 
+/* Resolve audio, then play. Anything already in hand plays immediately; a song
+   with no local file and no cached preview is fetched on the spot. The next song
+   is prefetched while this one plays (see prefetchNext), so in practice the
+   fetch has already happened by the time the DJ hits Play. */
 function playSong(rk, idx, opts){
   opts = opts || {};
-  var entry = library[songKey(rk, idx)];
   var s = SONGS[rk].songs[idx];
-  var start = hookFor(rk, idx), len = state.snip;
+  var entry = audioFor(rk, idx);
 
   current = { round: rk, idx: idx };
-  $("npBody").innerHTML =
-    '<div class="np-title">'+esc(s[0])+'</div><div class="np-artist">'+esc(s[1])+' · '+s[2]+'</div>';
-  $("npFrom").textContent = "from " + fmt(start);
-
   if (!opts.noMark) markPlayed(rk, idx);
 
-  if (!entry){
-    $("npBody").innerHTML +=
-      '<div class="muted" style="margin-top:8px">No audio file matched — play this one from your own deck. '+
-      '<a href="'+ytLink(s)+'" target="_blank" rel="noopener">search YouTube</a></div>';
-    renderList(); renderRoundStat();
-    return;
+  if (entry) return startPlayback(rk, idx, entry);
+
+  /* Show the song straight away — the room is waiting on the title, not the audio. */
+  showNowPlaying(s, null);
+  $("npFrom").textContent = "finding preview…";
+  renderList(); renderRoundStat();
+
+  ensurePreview(rk, idx).then(function(e){
+    /* The DJ may have moved on while the request was in flight. */
+    if (!current || current.round !== rk || current.idx !== idx) return;
+    if (e && e.url) startPlayback(rk, idx, e);
+    else noAudioNotice(rk, idx, e === PREV_FAIL);
+  });
+}
+
+function showNowPlaying(s, note){
+  $("npBody").innerHTML =
+    '<div class="np-title">'+esc(s[0])+'</div><div class="np-artist">'+esc(s[1])+' · '+s[2]+'</div>' +
+    (note ? '<div class="muted" style="margin-top:8px">'+note+'</div>' : '');
+}
+
+function noAudioNotice(rk, idx, failed){
+  var s = SONGS[rk].songs[idx];
+  $("npFrom").textContent = "—";
+  $("npBody").innerHTML +=
+    '<div class="muted" style="margin-top:8px">' +
+    (failed
+      ? "Couldn't reach iTunes — rate-limited or offline. "
+      : "No match on iTunes. ") +
+    'Play this one from your own deck. ' +
+    '<a href="'+ytLink(s)+'" target="_blank" rel="noopener">search YouTube</a>' +
+    (failed ? ' · <a href="#" id="npRetry">try again</a>' : '') +
+    '</div>';
+  if (failed){
+    $("npRetry").onclick = function(ev){
+      ev.preventDefault();
+      playSong(rk, idx, { noMark: true });
+    };
   }
+  renderList(); renderRoundStat();
+}
+
+function startPlayback(rk, idx, entry){
+  var s = SONGS[rk].songs[idx];
+  /* An iTunes preview is already a ~30s excerpt chosen by Apple, so the hook
+     offset does not apply — seeking into it would skip most of the snippet. */
+  var isPrev = !!entry.preview;
+  var start = isPrev ? 0 : hookFor(rk, idx), len = state.snip;
+
+  showNowPlaying(s, null);
+  $("npFrom").textContent = isPrev ? "iTunes preview · 30s excerpt" : "from " + fmt(start);
 
   clearTimers();
   player.src = entry.url;
@@ -437,6 +513,7 @@ function playSong(rk, idx, opts){
   else player.addEventListener("loadedmetadata", begin);
 
   renderList(); renderRoundStat();
+  prefetchNext(rk);          // 30 seconds of cover for the next lookup
 }
 
 function ytLink(s){
@@ -473,7 +550,7 @@ function renderTabs(){
     d.innerHTML = '<span class="dot" style="background:'+ACC[rk]+'"></span>'+
       '<span style="color:var(--ink)">'+esc(SONGS[rk].label)+'</span>'+
       '<span class="cnt">'+state.played[rk].length+'/'+SONGS[rk].songs.length+'</span>';
-    d.onclick = function(){ state.round = rk; stopQuiet(); renderAll(); };
+    d.onclick = function(){ state.round = rk; stopQuiet(); renderAll(); prefetchNext(rk); };
     t.appendChild(d);
   });
 }
@@ -498,7 +575,7 @@ function renderList(){
       '<td class="sn">'+rank[idx]+'</td>'+
       '<td><div class="st">'+esc(s[0])+'</div><div class="sa">'+esc(s[1])+' · '+s[2]+'</div></td>'+
       '<td><input class="hook" type="number" min="0" value="'+hookFor(rk,idx)+'" data-h="'+idx+'"></td>'+
-      '<td><span class="src '+(haveAudio(rk,idx)?"file":"none")+'">'+(haveAudio(rk,idx)?"file":"none")+'</span></td>'+
+      '<td><span class="src '+audioKind(rk,idx)+'">'+audioKind(rk,idx)+'</span></td>'+
       '<td><button class="mini" data-p="'+idx+'">Play</button> '+
           '<button class="mini" data-t="'+idx+'">'+(isPlayed?"Unmark":"Mark")+'</button> '+
           '<button class="mini" data-f="'+idx+'" title="Pick the audio file for this song">'+
@@ -518,7 +595,7 @@ function renderList(){
   });
   tb.querySelectorAll("[data-f]").forEach(function(b){
     b.onclick = function(){ pendingAssign = { rk: rk, idx: +b.dataset.f }; $("assignFile").click(); };
-    if (haveAudio(rk, +b.dataset.f)) b.title = "Audio: " + library[songKey(rk, +b.dataset.f)].name;
+    if (haveAudio(rk, +b.dataset.f)) b.title = "Audio: " + audioFor(rk, +b.dataset.f).name;
   });
   tb.querySelectorAll("[data-h]").forEach(function(inp){
     inp.onchange = function(){ state.hooks[songKey(rk, +inp.dataset.h)] = Math.max(0, +inp.value||0); save(); };
@@ -663,10 +740,11 @@ function ingest(fileList){
   if (!files.length){ $("libStat").textContent = "No audio files found in that drop."; return; }
   var n = matchLibrary(files);
   var total = 0;
-  ROUND_KEYS.forEach(function(rk){ SONGS[rk].songs.forEach(function(_,i){ if (haveAudio(rk,i)) total++; }); });
+  ROUND_KEYS.forEach(function(rk){ SONGS[rk].songs.forEach(function(_,i){ if (library[songKey(rk,i)]) total++; }); });
   $("libStat").innerHTML = files.length+" audio file(s) read · <b style='color:var(--good)'>"+total+
-    "</b> of 160 songs matched." + (total<160 ? " Unmatched songs show <span class='src none'>none</span> in the list." : "");
+    "</b> of 160 songs matched by file." + (total<160 ? " The rest fall back to an iTunes preview, or show <span class='src none'>none</span>." : "");
   renderAll();
+  renderPrevStat();
 }
 $("assignFile").onchange = function(){
   var f = this.files[0];
@@ -689,6 +767,216 @@ $("drop").addEventListener("drop", function(e){
   if (e.dataTransfer.files && e.dataTransfer.files.length) ingest(e.dataTransfer.files);
 });
 
+/* ---------- iTunes previews ----------
+   The iTunes Search API is public, unauthenticated, and sends
+   access-control-allow-origin:* on both the search endpoint and the preview
+   audio, so the browser can fetch and play these directly with no proxy.
+   What comes back is a fixed ~30s excerpt chosen by Apple — which happens to be
+   exactly the unit this game plays. Local files still take precedence.
+   Rate limit is roughly 20 requests/minute, hence the deliberate throttle. */
+
+/* Apple's published guidance is ~20 requests/minute. That limit is enforced far
+   more harshly than it sounds: exceed it and the whole IP gets 403s for several
+   minutes, not just the offending request. 3s between calls keeps us just under
+   it. 160 songs therefore takes ~8 minutes — which is why this is a
+   before-the-party job. Do not lower this. */
+var ITUNES_GAP = 3000;
+var ITUNES_MAX_BACKOFF = 60000;
+var ITUNES_GIVEUP = 6;     // consecutive throttled retries before we stop
+var fetchAbort = false;
+
+function squash(s){ return norm(s).replace(/ /g, ""); }
+
+/* Accept a result only if BOTH title and artist plausibly correspond, so we
+   never silently bind a cover, a remix, or a karaoke version to a square. */
+function previewPick(title, artist, results){
+  var i, it, nt = squash(title), na = squash(artist);
+  for (i = 0; i < results.length; i++){
+    it = results[i];
+    if (!it.previewUrl) continue;
+    var rt = squash(it.trackName || ""), ra = squash(it.artistName || "");
+    var artistOk = ra.indexOf(na) >= 0 || na.indexOf(ra) >= 0;
+    var titleOk  = rt.indexOf(nt) >= 0 || nt.indexOf(rt) >= 0;
+    if (artistOk && titleOk) return it;
+  }
+  return null;
+}
+
+function itunesSearch(title, artist){
+  var url = "https://itunes.apple.com/search?entity=song&limit=5&term=" +
+            encodeURIComponent(title + " " + artist);
+  return fetch(url, { cache: "force-cache" }).then(function(r){
+    if (r.status === 403) { var e = new Error("throttled"); e.throttled = true; throw e; }
+    if (!r.ok) throw new Error("http " + r.status);
+    return r.json();
+  }).then(function(d){ return (d && d.results) || []; });
+}
+
+/* Background tabs get their timers clamped hard (and eventually frozen), which
+   would strand an 8-minute fetch if the DJ clicks away. setTimeout alone is not
+   enough — so also resolve the moment the tab becomes visible again, if the
+   deadline has already passed. Same class of problem the playback tick avoids
+   by not using requestAnimationFrame. */
+/* ---- on-demand resolution ----
+   A round only ever plays 10-15 songs, so fetching as we go costs ~50 requests
+   across the whole night, spread minutes apart — comfortably under Apple's rate
+   limit, and it never fetches a song nobody hears. prevPending de-duplicates so
+   a prefetch and a Play click for the same song share one request. */
+var prevPending = {};   // songKey -> in-flight Promise
+var prevMiss = {};      // songKey -> 1, songs Apple has no match for (don't retry all night)
+/* "Apple has no such song" and "we could not reach Apple" need different words on
+   screen: the first is final, the second is worth retrying. */
+var PREV_FAIL = { failed: true };
+
+function ensurePreview(rk, idx){
+  var k = songKey(rk, idx);
+  var have = audioFor(rk, idx);
+  if (have) return Promise.resolve(have);
+  if (prevMiss[k]) return Promise.resolve(null);
+  if (prevPending[k]) return prevPending[k];
+
+  var s = SONGS[rk].songs[idx];
+  var p = itunesSearch(s[0], s[1]).then(function(results){
+    var hit = previewPick(s[0], s[1], results);
+    if (!hit){ prevMiss[k] = 1; return null; }
+    previews[k] = { url: hit.previewUrl, preview: true,
+                    name: hit.trackName + " — " + hit.artistName + " (iTunes preview)" };
+    save();
+    renderList(); renderPrevStat();
+    return previews[k];
+  }).catch(function(){
+    /* A throttle or a network blip is not a permanent miss — leave it unmarked
+       so the next attempt can still succeed. */
+    return PREV_FAIL;
+  }).then(function(v){ delete prevPending[k]; return v; });
+
+  prevPending[k] = p;
+  return p;
+}
+
+/* Warm the next song while the current one plays. 30 seconds of cover means the
+   lookup is done long before the DJ hits Play again. */
+function prefetchNext(rk){
+  var n = nextUnplayed(rk);
+  if (n != null && n >= 0) ensurePreview(rk, n);
+}
+
+function sleep(ms){
+  return new Promise(function(res){
+    var due = Date.now() + ms, settled = false;
+    var fin = function(){
+      if (settled) return;
+      settled = true;
+      document.removeEventListener("visibilitychange", onVis);
+      res();
+    };
+    var onVis = function(){ if (!document.hidden && Date.now() >= due) fin(); };
+    document.addEventListener("visibilitychange", onVis);
+    setTimeout(fin, ms);
+  });
+}
+
+/* Every song with no local file and no cached preview, in play order so the
+   songs most likely to be needed first are resolved first. */
+function previewTodo(){
+  var todo = [];
+  ROUND_KEYS.forEach(function(rk){
+    suggestedPlayOrder(rk, state.seed).forEach(function(idx){
+      var k = songKey(rk, idx);
+      if (!library[k] && !previews[k]) todo.push({ rk: rk, idx: idx, key: k });
+    });
+  });
+  return todo;
+}
+
+function prevCounts(){
+  var f = 0, p = 0, n = 0;
+  ROUND_KEYS.forEach(function(rk){
+    SONGS[rk].songs.forEach(function(_, i){
+      var k = audioKind(rk, i);
+      if (k === "file") f++; else if (k === "itunes") p++; else n++;
+    });
+  });
+  return { file: f, itunes: p, none: n, total: f + p + n };
+}
+
+function renderPrevStat(msg){
+  var c = prevCounts();
+  $("prevStat").innerHTML = (msg ? msg + "<br>" : "") +
+    "<b style='color:var(--good)'>" + c.file + "</b> local file · " +
+    "<b style='color:#7fb0ff'>" + c.itunes + "</b> preview · " +
+    "<b style='color:var(--bad)'>" + c.none + "</b> none  (of " + c.total + ")";
+  $("btnClearPrev").hidden = c.itunes === 0;
+}
+
+function fetchPreviews(){
+  var todo = previewTodo();
+  if (!todo.length){ renderPrevStat("Nothing to fetch — every song already has audio."); return; }
+
+  fetchAbort = false;
+  $("btnFetchPrev").disabled = true;
+  $("btnStopPrev").hidden = false;
+
+  var done = 0, got = 0, miss = 0, gap = ITUNES_GAP, throttles = 0;
+  var t0 = Date.now();
+
+  var step = function(i){
+    if (fetchAbort || i >= todo.length){
+      $("btnFetchPrev").disabled = false;
+      $("btnStopPrev").hidden = true;
+      save(); renderAll();
+      if (!(fetchAbort && throttles >= ITUNES_GIVEUP)){
+        renderPrevStat((fetchAbort ? "Stopped. " : "Done in " + Math.round((Date.now()-t0)/1000) + "s — ") +
+                       got + " found, " + miss + " with no match.");
+      }
+      return;
+    }
+    var t = todo[i], s = SONGS[t.rk].songs[t.idx];
+    var left = Math.round((todo.length - done) * ITUNES_GAP / 1000);
+    renderPrevStat("Fetching " + (done + 1) + " of " + todo.length + " — " + esc(s[0]) +
+                   "… <span class='muted'>~" + Math.ceil(left / 60) + " min left</span>");
+
+    itunesSearch(s[0], s[1]).then(function(results){
+      var hit = previewPick(s[0], s[1], results);
+      if (hit){
+        previews[t.key] = { url: hit.previewUrl, preview: true,
+                            name: hit.trackName + " — " + hit.artistName + " (iTunes preview)" };
+        got++;
+      } else miss++;
+      done++;
+      gap = ITUNES_GAP; throttles = 0;
+      if (done % 10 === 0){ save(); renderList(); }
+      return sleep(gap).then(function(){ step(i + 1); });
+    }).catch(function(err){
+      if (err && err.throttled){
+        /* Backed off rather than skipped: a throttled song is not a missing one,
+           so retry the same index after a longer pause. Give up eventually so a
+           sustained lockout does not spin silently until someone notices. */
+        if (++throttles >= ITUNES_GIVEUP){
+          fetchAbort = true;
+          renderPrevStat("Apple is still rate-limiting after " + throttles +
+                         " retries. Wait ~15 minutes and start again — progress so far is saved.");
+          return sleep(0).then(function(){ step(todo.length); });
+        }
+        gap = Math.min(gap * 2, ITUNES_MAX_BACKOFF);
+        renderPrevStat("Rate-limited by Apple — waiting " + Math.round(gap / 1000) +
+                       "s (retry " + throttles + " of " + ITUNES_GIVEUP + ")…");
+        return sleep(gap).then(function(){ step(i); });
+      }
+      miss++; done++;
+      return sleep(gap).then(function(){ step(i + 1); });
+    });
+  };
+  step(0);
+}
+
+$("btnFetchPrev").onclick = fetchPreviews;
+$("btnStopPrev").onclick = function(){ fetchAbort = true; };
+$("btnClearPrev").onclick = function(){
+  if (!confirm("Remove all iTunes previews? Local files are unaffected.")) return;
+  previews = {}; save(); renderAll(); renderPrevStat("Previews cleared.");
+};
+
 /* keyboard */
 document.addEventListener("keydown", function(e){
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
@@ -702,6 +990,8 @@ try{ var last = localStorage.getItem("djbingo:lastSeed"); if (last){ state.seed 
 $("seed").value = state.seed;
 load();
 renderAll();
+renderPrevStat();
+prefetchNext(state.round);
 })();
 </script>
 </body>
