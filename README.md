@@ -1,6 +1,6 @@
 # DJ Bingo — 50th Anniversary Edition
 
-Music bingo for a party. Four rounds — 80s, 90s, 2000s, 2010s — with printable cards
+Music bingo for a party. Five rounds — 70s, 80s, 90s, 2000s, 2010s — with printable cards
 for every guest, a DJ console that plays 30-second snippets, and winner verification
 that actually proves the winner won.
 
@@ -60,10 +60,11 @@ Paste names into the box, one per line — line 1 becomes card #1. Blank lines b
 
 Click **Generate cards**, then **Print**.
 
-- **2 cards per page** (default) with **Group by guest** on: each guest's four rounds
-  come out together, so printing double-sided gives you **one sheet per guest** —
-  40 sheets for 40 guests.
-- **1 per page (large print)** if your guests would rather not squint. That's 160
+- **2 cards per page** (default) with **Group by guest** on: each guest's five rounds
+  come out together, so printing double-sided gives you **three sheets per guest** —
+  120 sheets for 40 guests. (Five cards don't divide evenly by two, so the last side
+  of each guest's stack is blank.)
+- **1 per page (large print)** if your guests would rather not squint. That's 200
   pages, so consider printing one round at a time.
 
 Print a single test page first and check it's readable at arm's length.
@@ -127,9 +128,9 @@ Three things to know:
   music you own, let the rest fall back. The list shows which is which — `file`,
   `itunes`, or `none`.
 
-**Pre-fetch all (optional)** resolves all 160 up front. The only reason to bother is
+**Pre-fetch all (optional)** resolves all 200 up front. The only reason to bother is
 to find out in advance which songs Apple has no match for, so you can source those
-yourself. It takes about 8 minutes because Apple rate-limits to roughly 20 requests a
+yourself. It takes about 10 minutes because Apple rate-limits to roughly 20 requests a
 minute and enforces it harshly — go over and it returns 403 for your whole connection
 for several minutes. Run it at home, keep the tab visible (browsers throttle timers in
 background tabs), and if you do get 403s, wait ~15 minutes and click again — progress
@@ -153,7 +154,7 @@ click **Save hooks**. They're stored in the browser and survive a reload.
 Open `dj.html`, click **Load config…**, pick your `dj-bingo-config.json`, and confirm
 the seed matches the cards. Then, for each round:
 
-1. Click the round tab (**Round 1 — The 80s** first).
+1. Click the round tab (**Round 1 — The 70s** first).
 2. Hit **▶︎ Play next**. It plays the next song in a suggested shuffled order and marks
    it as played automatically.
 3. Repeat. Give the room a beat between songs to find their squares.
@@ -210,7 +211,7 @@ The **Round status** panel flags ties for you before you're standing there guess
 
 ## Customising the songs
 
-All 160 songs live in [`data/songs.js`](data/songs.js) — 40 per decade. Each entry is:
+All 200 songs live in [`data/songs.js`](data/songs.js) — 40 per decade. Each entry is:
 
 ```js
 ["Billie Jean", "Michael Jackson", 1983, 55]
@@ -235,7 +236,7 @@ Cards are regenerated from the seed, so a lost card is never a problem — the r
 identical to the original. `cards.html` accepts URL parameters:
 
 ```
-cards.html?from=17&to=17            # just guest #17, all four rounds
+cards.html?from=17&to=17            # just guest #17, all five rounds
 cards.html?from=17&to=17&rounds=r2  # just guest #17's 90s card
 cards.html?view=run                 # straight to the DJ run sheet
 cards.html?per=1                    # large print
@@ -282,7 +283,7 @@ right file.
 ```
 cards.html       card generator, DJ run sheet, print layout
 dj.html          DJ console: player, tracking, verification
-data/songs.js    the 160 songs, 40 per decade
+data/songs.js    the 200 songs, 40 per decade
 js/bingo.js      seeded card generation + win checking (shared by both pages)
 audio/           drop your music here (git-ignored)
 ```

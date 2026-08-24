@@ -8,7 +8,53 @@
  */
 var SONGS = {
   r1: {
-    label: "Round 1 — The 80s",
+    label: "Round 1 — The 70s",
+    tag: "70s",
+    songs: [
+      ["Dancing Queen",                      "ABBA",                     1976, 12],
+      ["Stayin' Alive",                      "Bee Gees",                 1977,  0],
+      ["Superstition",                       "Stevie Wonder",            1972,  0],
+      ["I Will Survive",                     "Gloria Gaynor",            1978, 72],
+      ["Le Freak",                           "Chic",                     1978, 14],
+      ["September",                          "Earth, Wind & Fire",       1978,  0],
+      ["Y.M.C.A.",                           "Village People",           1978, 52],
+      ["Hotel California",                   "Eagles",                   1976, 50],
+      ["Bohemian Rhapsody",                  "Queen",                    1975,  0],
+      ["Don't Stop Me Now",                  "Queen",                    1978, 12],
+      ["We Will Rock You",                   "Queen",                    1977,  0],
+      ["Sweet Home Alabama",                 "Lynyrd Skynyrd",           1974,  0],
+      ["Smoke on the Water",                 "Deep Purple",              1972,  0],
+      ["Highway to Hell",                    "AC/DC",                    1979,  0],
+      ["Born to Run",                        "Bruce Springsteen",        1975,  0],
+      ["American Pie",                       "Don McLean",               1971, 100],
+      ["Imagine",                            "John Lennon",              1971,  0],
+      ["Let It Be",                          "The Beatles",              1970,  0],
+      ["Your Song",                          "Elton John",               1970,  0],
+      ["Rocket Man",                         "Elton John",               1972, 82],
+      ["Piano Man",                          "Billy Joel",               1973, 80],
+      ["Dream On",                           "Aerosmith",                1973,  0],
+      ["More Than a Feeling",                "Boston",                   1976,  0],
+      ["Layla",                              "Derek and the Dominos",    1971,  0],
+      ["Stairway to Heaven",                 "Led Zeppelin",             1971,  0],
+      ["Let's Stay Together",                "Al Green",                 1972,  0],
+      ["Ain't No Mountain High Enough",      "Diana Ross",               1970, 60],
+      ["I'll Be There",                      "The Jackson 5",            1970,  0],
+      ["What's Going On",                    "Marvin Gaye",              1971,  0],
+      ["Lean on Me",                         "Bill Withers",             1972,  0],
+      ["Ain't No Sunshine",                  "Bill Withers",             1971,  0],
+      ["Good Times",                         "Chic",                     1979,  0],
+      ["Get Down Tonight",                   "KC and the Sunshine Band", 1975,  0],
+      ["Go Your Own Way",                    "Fleetwood Mac",            1977,  0],
+      ["Dreams",                             "Fleetwood Mac",            1977,  0],
+      ["Maggie May",                         "Rod Stewart",              1971,  0],
+      ["Another Brick in the Wall",          "Pink Floyd",               1979, 60],
+      ["Night Fever",                        "Bee Gees",                 1977,  0],
+      ["Play That Funky Music",              "Wild Cherry",              1976,  0],
+      ["Waterloo",                           "ABBA",                     1974,  0]
+    ]
+  },
+  r2: {
+    label: "Round 2 — The 80s",
     tag: "80s",
     songs: [
       ["Billie Jean",                      "Michael Jackson",          1983, 55],
@@ -53,8 +99,8 @@ var SONGS = {
       ["Walking on Sunshine",              "Katrina & The Waves",      1985, 42]
     ]
   },
-  r2: {
-    label: "Round 2 — The 90s",
+  r3: {
+    label: "Round 3 — The 90s",
     tag: "90s",
     songs: [
       ["Smells Like Teen Spirit",          "Nirvana",                  1991,  0],
@@ -99,8 +145,8 @@ var SONGS = {
       ["Say My Name",                      "Destiny's Child",          1999, 44]
     ]
   },
-  r3: {
-    label: "Round 3 — The 2000s",
+  r4: {
+    label: "Round 4 — The 2000s",
     tag: "2000s",
     songs: [
       ["Hey Ya!",                          "OutKast",                  2003, 58],
@@ -145,8 +191,8 @@ var SONGS = {
       ["Party in the U.S.A.",              "Miley Cyrus",              2009, 52]
     ]
   },
-  r4: {
-    label: "Round 4 — The 2010s",
+  r5: {
+    label: "Round 5 — The 2010s",
     tag: "2010s",
     songs: [
       ["Uptown Funk",                      "Mark Ronson ft. Bruno Mars",2014, 76],
@@ -193,6 +239,6 @@ var SONGS = {
   }
 };
 
-var ROUND_KEYS = ["r1", "r2", "r3", "r4"];
+var ROUND_KEYS = ["r1", "r2", "r3", "r4", "r5"];
 
 if (typeof module !== "undefined" && module.exports) { module.exports = { SONGS: SONGS, ROUND_KEYS: ROUND_KEYS }; }
