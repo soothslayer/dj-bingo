@@ -8,7 +8,7 @@
   :root{
     --bg:#14131a; --panel:#1e1d27; --panel2:#272634; --ink:#f2f0ea; --muted:#9a95a8;
     --rule:#37354a; --accent:#f5b73d; --good:#3fbf6b; --bad:#e0534f; --info:#4aa8e0;
-    --r1:#f5b73d; --r2:#2dd4bf; --r3:#a78bfa; --r4:#fb7185;
+    --r1:#f5b73d; --r2:#f97316; --r3:#2dd4bf; --r4:#a78bfa; --r5:#fb7185;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
@@ -190,7 +190,7 @@
           </div>
           <div class="muted" style="margin-top:6px;font-size:11px">
             Pre-fetching is only worth it to see in advance which songs Apple has no
-            match for. It takes ~8 minutes (Apple's rate limit), so run it at home and
+            match for. It takes ~10 minutes (Apple's rate limit), so run it at home and
             keep this tab visible.
           </div>
           <div class="muted" id="prevStat" style="margin-top:8px"></div>
@@ -213,12 +213,12 @@
 (function(){
 "use strict";
 var $ = function(id){ return document.getElementById(id); };
-var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
+var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)", r5:"var(--r5)" };
 
 var state = {
   seed: "ANNIVERSARY-50",
   round: "r1",
-  played: { r1:[], r2:[], r3:[], r4:[] },   // song indices, in the order played
+  played: { r1:[], r2:[], r3:[], r4:[], r5:[] },   // song indices, in the order played
   hooks:  {},                               // "r1:12" -> seconds (overrides)
   snip: 30,
   cardFrom: 1,                              // the card numbers actually printed —
@@ -246,7 +246,7 @@ function load(){
     var raw = localStorage.getItem(lsKey());
     if (raw){
       var d = JSON.parse(raw);
-      if (d.played) state.played = Object.assign({r1:[],r2:[],r3:[],r4:[]}, d.played);
+      if (d.played) state.played = Object.assign(emptyPlayed(), d.played);
       if (d.hooks) state.hooks = d.hooks;
       if (d.snip) { state.snip = d.snip; $("snipLen").value = d.snip; }
       if (d.libNames) libNames = d.libNames;
@@ -254,7 +254,7 @@ function load(){
       if (d.cardFrom) { state.cardFrom = d.cardFrom; $("cardFrom").value = d.cardFrom; }
       if (d.cardTo)   { state.cardTo   = d.cardTo;   $("cardTo").value   = d.cardTo; }
     } else {
-      state.played = {r1:[],r2:[],r3:[],r4:[]};
+      state.played = emptyPlayed();
     }
   }catch(e){}
 }
@@ -264,6 +264,16 @@ function hookFor(rk, idx){
   return (k in state.hooks) ? state.hooks[k] : SONGS[rk].songs[idx][3];
 }
 function songKey(rk, idx){ return rk + ":" + idx; }
+function songTotal(){
+  var n = 0;
+  ROUND_KEYS.forEach(function(rk){ n += SONGS[rk].songs.length; });
+  return n;
+}
+function emptyPlayed(){
+  var o = {};
+  ROUND_KEYS.forEach(function(rk){ o[rk] = []; });
+  return o;
+}
 
 /* ---------- audio matching ---------- */
 function norm(s){
@@ -742,7 +752,7 @@ function ingest(fileList){
   var total = 0;
   ROUND_KEYS.forEach(function(rk){ SONGS[rk].songs.forEach(function(_,i){ if (library[songKey(rk,i)]) total++; }); });
   $("libStat").innerHTML = files.length+" audio file(s) read · <b style='color:var(--good)'>"+total+
-    "</b> of 160 songs matched by file." + (total<160 ? " The rest fall back to an iTunes preview, or show <span class='src none'>none</span>." : "");
+    "</b> of " + songTotal() + " songs matched by file." + (total<songTotal() ? " The rest fall back to an iTunes preview, or show <span class='src none'>none</span>." : "");
   renderAll();
   renderPrevStat();
 }
@@ -778,7 +788,7 @@ $("drop").addEventListener("drop", function(e){
 /* Apple's published guidance is ~20 requests/minute. That limit is enforced far
    more harshly than it sounds: exceed it and the whole IP gets 403s for several
    minutes, not just the offending request. 3s between calls keeps us just under
-   it. 160 songs therefore takes ~8 minutes — which is why this is a
+   it. 200 songs therefore takes ~10 minutes — which is why this is a
    before-the-party job. Do not lower this. */
 var ITUNES_GAP = 3000;
 var ITUNES_MAX_BACKOFF = 60000;
