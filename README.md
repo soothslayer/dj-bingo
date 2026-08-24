@@ -73,7 +73,18 @@ Print a single test page first and check it's readable at arm's length.
 This saves `dj-bingo-config.json` (seed + card range). Hand it to the DJ along with
 the music — loading it in the console guarantees the seeds match.
 
-### 5. Get the music
+### 5. Print the DJ run sheet
+
+Click **DJ run sheet** in `cards.html`, then Print. You get one page per round listing
+every song in the same order the console plays them, with a tick box and its snippet
+start time.
+
+This is the party's insurance policy. If the laptop dies, the DJ keeps playing from
+their own phone and ticking boxes — and a winner can still be confirmed afterwards by
+entering the ticked songs into the console (or by checking the card by hand against
+the ticked list). Keep the order: verification depends on which song completed the line.
+
+### 6. Get the music
 
 The console plays audio files **from your own computer**. Nothing is uploaded and
 nothing is streamed, so it works on venue wifi that barely exists.
@@ -97,7 +108,7 @@ you drop the folder they match automatically.
 and a YouTube search link, and you play it from your own deck, phone, or streaming app.
 The bingo logic doesn't care where the sound comes from.
 
-### 6. Check the snippet start times
+### 7. Check the snippet start times
 
 Every song has a **Start** time — where its 30 seconds begins, chosen to land on the
 chorus or the signature riff rather than a slow intro. These are estimates. Skim the
@@ -187,6 +198,21 @@ each round prints in its own colour so the piles don't get mixed up.
 
 ---
 
+## Reprinting one card
+
+Cards are regenerated from the seed, so a lost card is never a problem — the reprint is
+identical to the original. `cards.html` accepts URL parameters:
+
+```
+cards.html?from=17&to=17            # just guest #17, all four rounds
+cards.html?from=17&to=17&rounds=r2  # just guest #17's 90s card
+cards.html?view=run                 # straight to the DJ run sheet
+cards.html?per=1                    # large print
+```
+
+`seed`, `occasion`, and `group` work the same way. Anything you leave out keeps the
+value shown in the form.
+
 ## Running from a server
 
 Double-clicking the files works. If your browser gets fussy about local files, serve
@@ -223,7 +249,7 @@ right file.
 ## Files
 
 ```
-cards.html       card generator + print layout
+cards.html       card generator, DJ run sheet, print layout
 dj.html          DJ console: player, tracking, verification
 data/songs.js    the 160 songs, 40 per decade
 js/bingo.js      seeded card generation + win checking (shared by both pages)

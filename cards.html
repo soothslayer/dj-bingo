@@ -79,22 +79,37 @@
   .sheet.one .cell.free .t{font-size:16pt}
   .sheet.one .card-foot{font-size:8pt}
 
+  /* DJ run sheet — paper fallback if the laptop dies mid-party */
+  .runsheet{background:#fff;break-after:page;page-break-after:always;padding:0;color:#1b1a17}
+  .runsheet h3{font-size:16pt;margin:0 0 2px;color:var(--accent2)}
+  .runsheet .rs-sub{font-size:9pt;color:var(--muted);margin-bottom:10px}
+  .rs-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;align-items:start}
+  .rs-table{width:100%;border-collapse:collapse;font-size:8.5pt}
+  .rs-table th{text-align:left;font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;
+        color:var(--muted);border-bottom:1.5px solid var(--accent2);padding:3px 4px}
+  .rs-table td{padding:2px 4px;border-bottom:1px solid #e8e2d6}
+  .rs-box{width:13px;height:13px;border:1.5px solid #8a8272;border-radius:3px;display:inline-block}
+  .rs-n{width:18px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .rs-t{font-weight:700;line-height:1.15}
+  .rs-a{color:var(--muted);font-size:7pt;line-height:1.1}
+  .rs-s{width:34px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+
   .sheet{display:flex;flex-direction:column;gap:8px;break-after:page;page-break-after:always}
   .sheet.one .card{height:10.05in}
   .sheet.two .card{height:4.92in}
 
   @media screen{
     #sheets{display:block;max-width:960px;margin:0 auto 60px;padding:0 24px}
-    .sheet{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.13);margin:0 0 22px;padding:.35in;
+    .sheet,.runsheet{background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.13);margin:0 0 22px;padding:.35in;
            width:8.5in;zoom:var(--preview-zoom,1)}
   }
   @page{size:letter portrait;margin:.35in}
   @media print{
     .panel,.no-print{display:none!important}
     #sheets{display:block!important;padding:0;margin:0;max-width:none}
-    .sheet{box-shadow:none;margin:0;padding:0;width:auto;zoom:1!important}
+    .sheet,.runsheet{box-shadow:none;margin:0;padding:0;width:auto;zoom:1!important}
     body{background:#fff}
-    .sheet:last-child{break-after:auto;page-break-after:auto}
+    .sheet:last-child,.runsheet:last-child{break-after:auto;page-break-after:auto}
   }
 </style>
 </head>
@@ -153,6 +168,7 @@
   <div class="actions">
     <button id="gen">Generate cards</button>
     <button class="ghost" id="print">Print</button>
+    <button class="ghost" id="genRun">DJ run sheet</button>
     <button class="ghost" id="exportCfg">Download game config</button>
   </div>
   <div id="status" class="note"></div>
@@ -340,7 +356,7 @@
   };
 
   /* URL parameters, so a single lost card is a one-liner:
-     cards.html?from=17&to=17&rounds=r2  */
+     cards.html?from=17&to=17&rounds=r2 · cards.html?view=run  */
   (function applyParams(){
     var q = new URLSearchParams(location.search);
     if (!q.toString()) return;
@@ -361,13 +377,58 @@
     }
   })();
 
+  /* A printed run sheet in the DJ's hand means a dead laptop doesn't end the game:
+     songs in the same order the console would play them, with a box to tick. */
+  function generateRunSheet(){
+    var c = cfg(), rounds = selectedRounds();
+    var out = $("sheets");
+    out.innerHTML = "";
+    if (!rounds.length){ $("status").textContent = "Pick at least one round."; return; }
+
+    rounds.forEach(function(rk){
+      var pool = SONGS[rk].songs, order = suggestedPlayOrder(rk, c.seed);
+      var row = function(idx, i){
+        var s = pool[idx];
+        return '<tr><td class="rs-n">'+(i+1)+'</td><td><span class="rs-box"></span></td>'+
+               '<td><div class="rs-t">'+esc(s[0])+'</div>'+
+               '<div class="rs-a">'+esc(s[1])+' &middot; '+s[2]+'</div></td>'+
+               '<td class="rs-s">'+Math.floor(s[3]/60)+":"+String(s[3]%60).padStart(2,"0")+'</td></tr>';
+      };
+      var half = Math.ceil(order.length / 2);
+      var table = function(from, to){
+        var r = "";
+        for (var i = from; i < to && i < order.length; i++) r += row(order[i], i);
+        return '<table class="rs-table"><thead><tr><th></th><th></th><th>Song</th><th>Start</th>'+
+               '</tr></thead><tbody>'+r+'</tbody></table>';
+      };
+      var cols = '<div class="rs-cols">'+table(0, half)+table(half, order.length)+'</div>';
+
+      var d = document.createElement("div");
+      d.className = "runsheet";
+      d.style.setProperty("--accent2", ACCENT[rk]);
+      d.innerHTML =
+        '<h3>'+esc(SONGS[rk].label)+' &mdash; DJ run sheet</h3>'+
+        '<div class="rs-sub">'+esc(c.occasion)+' &middot; seed '+esc(c.seed)+
+        ' &middot; cards '+c.from+'&ndash;'+c.to+
+        ' &middot; tick each song as you play it, and keep the order &mdash; '+
+        'a winner is only confirmed against songs actually played.</div>'+
+        cols;
+      out.appendChild(d);
+    });
+    $("status").innerHTML = "DJ run sheet for "+rounds.length+" round(s) &mdash; <b>"+
+      rounds.length+"</b> page(s). Hit Print.";
+    scalePreview();
+  }
+
+  $("genRun").onclick = generateRunSheet;
   $("gen").onclick = generate;
+  if (new URLSearchParams(location.search).get("view") === "run") generateRunSheet();
   $("print").onclick = function(){
     if (!$("sheets").children.length) generate();
     setTimeout(function(){ window.print(); }, 60);
   };
 
-  generate();
+  if (new URLSearchParams(location.search).get("view") !== "run") generate();
 })();
 </script>
 </body>
