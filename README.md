@@ -1,18 +1,21 @@
 # DJ Bingo — 50th Anniversary Edition
 
-Music bingo for a party. Five rounds — 70s, 80s, 90s, 2000s, 2010s — with printable cards
+Music bingo for a party. Four rounds — Going to the Chapel, Songs of 1976, Golden Oldies,
+Love Songs — each won a harder way than the last, with printable cards
 for every guest, a DJ console that plays 30-second snippets, and winner verification
 that actually proves the winner won.
 
-Two files, no install, no internet needed:
+Three files, no install, no internet needed:
 
 | File | Who uses it | What it does |
 |---|---|---|
 | [`cards.html`](cards.html) | You, before the party | Generates and prints numbered bingo cards |
 | [`dj.html`](dj.html) | The DJ, during the party | Plays snippets, tracks what's played, verifies winners |
+| [`show.html`](show.html) | The room, on the projector | Counts down each snippet, then reveals the song |
 
-Open either by double-clicking it, or serve the folder and visit
-`http://localhost:8777` (see [Running from a server](#running-from-a-server)).
+Open any of them by double-clicking, or serve the folder and visit
+`http://localhost:8777` (see [Running from a server](#running-from-a-server)). The
+projector page needs the server if you want it to follow the console automatically.
 
 ---
 
@@ -20,7 +23,25 @@ Open either by double-clicking it, or serve the folder and visit
 
 Each guest gets a numbered card per round: a 5×5 grid of songs with a FREE centre
 square. The DJ plays a 30-second snippet; guests mark the square if that song is on
-their card. First to five in a row — across, down, or diagonally — shouts BINGO.
+their card.
+
+**Each round is won a different way, and the game gets harder as the night goes on:**
+
+| Round | Theme | To win | Squares | Typical length |
+|---|---|---|---|---|
+| 1 | Going to the Chapel | **One line** — any row, column or diagonal | 5 | ~11 songs, 8 min |
+| 2 | Songs of 1976 | **Two lines** — any two, and they may cross | ~10 | ~18 songs, 12 min |
+| 3 | Golden Oldies | **Picture frame** — every square around the outside edge | 16 | ~33 songs, 22 min |
+| 4 | Love Songs | **Cover all** — every square on the card | 24 | ~36 songs, 24 min |
+
+The win pattern is printed on every card, as a name and a little 5×5 icon beside the
+round title, so nobody has to remember which round is which. It also shows on the DJ's
+round tab, run sheet, and verification panel.
+
+Rounds 3 and 4 are long by design — a frame needs 16 of a card's 24 songs and a full
+house needs all 24, so most of the pool has to be played before anyone finishes. That
+is the shape of those games, not a bad seed. Budget about an hour of music for the
+four rounds, and consider dropping the snippet to 20 seconds for the last two.
 
 **Cards are never stored anywhere.** They are *derived* from three things: the master
 seed, the round, and the card number. The generator and the DJ console run the same
@@ -43,13 +64,20 @@ it before printing a single page.
 
 - Set the **master seed** and the card range (1–40 for 40 guests).
 - Click **Simulate this seed** — it reports how many songs each round needs before
-  someone gets bingo.
-- Aim for **9–15 songs** per round (≈8–13 minutes each). Click **Find a well-paced
-  seed** to search for a seed where every round lands in 10–14 songs with exactly one
-  winner.
+  someone wins it, how long that is in minutes, and the total for the night.
+- Each round is judged against its own win condition, because they are not comparable:
+  a one-line round should land in **8–16 songs**, two lines in **14–22**, the picture
+  frame in **28–36**, and cover-all in **32–39**. A 33-song frame round is normal; a
+  33-song one-line round would mean something is wrong.
+- Click **Find a well-paced seed** to search for a seed where every round lands in its
+  ideal range with exactly one winner.
 
-Typical result with 40 guests: first bingo after ~11 songs. Fewer than 7 happens about
-3% of the time, which is why it's worth checking rather than guessing.
+**Ties get more likely the more of the card a round asks for.** Measured over 300
+seeds with 40 guests: one line ties about 15% of the time, two lines 20%, the picture
+frame 33%, and cover-all 38% — by the end of a cover-all round almost everyone is
+waiting on the same last few songs. The seed search will often fail to find a
+tie-free cover-all round no matter how long it looks; that is expected, and the
+tiebreak below handles it.
 
 ### 2. Add guest names (optional)
 
@@ -60,11 +88,10 @@ Paste names into the box, one per line — line 1 becomes card #1. Blank lines b
 
 Click **Generate cards**, then **Print**.
 
-- **2 cards per page** (default) with **Group by guest** on: each guest's five rounds
-  come out together, so printing double-sided gives you **three sheets per guest** —
-  120 sheets for 40 guests. (Five cards don't divide evenly by two, so the last side
-  of each guest's stack is blank.)
-- **1 per page (large print)** if your guests would rather not squint. That's 200
+- **2 cards per page** (default) with **Group by guest** on: each guest's four rounds
+  come out together, so printing double-sided gives you **two sheets per guest** —
+  80 sheets for 40 guests.
+- **1 per page (large print)** if your guests would rather not squint. That's 160
   pages, so consider printing one round at a time.
 
 Print a single test page first and check it's readable at arm's length.
@@ -149,16 +176,95 @@ click **Save hooks**. They're stored in the browser and survive a reload.
 
 ---
 
+## On the projector
+
+`show.html` is the big screen: a countdown while the snippet plays, then a press to
+reveal the song and artist to the room. It reads the same song list and the same
+suggested play order as the console, so the screen and the speakers stay in step
+without the two pages needing to talk to each other.
+
+Open it, set the seed to match the console, pick your rounds, and hit **Start the
+show**. It goes fullscreen and needs nothing else.
+
+Each round runs as: a **title slide** with the round's name and how it's won (the
+pattern icon, big, so the room can see what they're playing for), then per song a
+**countdown** and a **reveal**, and finally a **recap** listing everything that round
+played — handy while people check their cards.
+
+Every slide carries the round number, the theme and the win condition: as a corner
+header (`ROUND 3 · Golden Oldies · ▣ Picture frame`) and again above the song itself,
+so anyone glancing up mid-round knows where they are — and so it survives a projector
+that crops the edges of the picture.
+
+| Key | Action |
+|---|---|
+| `space` / `→` / `PageDown` / a presenter clicker | Reveal, then on to the next song |
+| `←` / `PageUp` | Back |
+| `X` or the **Someone called it!** button | Put the call up on the screen |
+| `R` | Restart the countdown (use it if the music started late) |
+| `P` | Pause the countdown |
+| `B` | Blank the screen — for speeches, or between rounds |
+| `F` | Fullscreen |
+| `Esc` | Back to the setup screen |
+
+Clicking or tapping anywhere also advances, so the show can be driven from a phone.
+
+### When someone calls it
+
+Press `X`, or click **Someone called it!** in the bottom-left corner (it appears with
+the other controls when you move the mouse, and stays off the projection the rest of
+the time). The screen fills with the call and **Card number, please**, which is the
+DJ's cue to go and verify on the console.
+
+The word is whatever *that round* is won by — **BINGO** in round 1, then **DOUBLE
+BINGO**, **FRAME** and **FULL HOUSE** — so the room picks up the rule by seeing it.
+Underneath sits the round, the theme, the win condition and how many songs are in.
+
+It's an overlay, not a slide: the countdown freezes while it's up, and any key or
+click dismisses it straight back to the song you were on with the clock running
+again. A false alarm costs nothing — carry on with the same press.
+
+### Letting it follow the DJ console
+
+Tick **Follow the DJ console** and the projector drives itself: when the DJ hits
+**Play next**, the screen jumps to that song's countdown and starts counting. The
+reveal stays manual — that beat belongs to the DJ. It also picks up the console's
+snippet length, so changing 30 to 20 seconds mid-party changes the countdown too.
+
+This works through the browser's own storage, so it needs both pages open in the
+**same browser** and served from the **same address** (`http://localhost:8777/dj.html`
+and `http://localhost:8777/show.html`). Opened as `file://` the two pages can't see
+each other, and the show simply stays manual.
+
+The countdown starts when the console *marks* the song played, which is a moment
+before the audio actually begins if it's still fetching a preview. If it drifts, press
+`R` to restart the countdown in time with the music.
+
+### Joining late
+
+`show.html` takes the same URL parameters as the rest, plus a starting point:
+
+```
+show.html?round=r3                     # just the Golden Oldies round
+show.html?round=r3&start=12            # pick up at song 12
+show.html?snip=20&follow=1             # 20-second countdown, following the console
+```
+
+---
+
 ## Running the game
 
 Open `dj.html`, click **Load config…**, pick your `dj-bingo-config.json`, and confirm
 the seed matches the cards. Then, for each round:
 
-1. Click the round tab (**Round 1 — The 70s** first).
+1. Click the round tab (**Round 1 — Going to the Chapel** first).
 2. Hit **▶︎ Play next**. It plays the next song in a suggested shuffled order and marks
    it as played automatically.
 3. Repeat. Give the room a beat between songs to find their squares.
-4. When someone shouts BINGO, go to **Verify a winner**.
+4. When someone shouts, go to **Verify a winner**.
+
+If you're projecting, open [`show.html`](show.html) on the second screen — see
+[On the projector](#on-the-projector).
 
 Keyboard, so you're not hunting for buttons in the dark:
 
@@ -187,23 +293,34 @@ Type the card number from the **top-right corner of the card** and press Enter.
 The console rebuilds that exact card and shows the grid with every marked square
 highlighted, then gives one of two answers:
 
-- **✓ BINGO CONFIRMED** — names the winning line, and the exact song that completed it
-  ("Diagonal / completed on song #13 — *Like a Prayer*").
-- **✗ NOT A WINNER** — shows how close they were ("best line has 4 of 5 marked"), which
-  is usually enough to end the argument on the spot.
+- **✓ CONFIRMED** — headed with what they actually achieved (**BINGO**, **DOUBLE
+  BINGO**, **FRAME** or **FULL HOUSE**), naming the pattern and the exact song that
+  completed it ("Diagonal / finished on song #13 — *Sweet Caroline*"). On a two-line
+  round it names both lines and the one that finished last, since that is the moment
+  the card actually won.
+- **✗ NOT A WINNER** — shows how close they were, in the terms of that round ("15 of 16
+  squares marked — 1 to go", or "1 of 2 lines complete; closest unfinished is Row 3, 4
+  of 5 marked"), which is usually enough to end the argument on the spot.
+
+The panel checks the round's *own* win condition, so a guest who shouts on one line
+during the picture-frame round gets a clear no with the reason.
 
 If the number isn't in your printed range, it says so rather than inventing a result.
 
 ### If two people call bingo at once
 
-It happens in roughly one round in six with 40 guests. Both cards can be genuinely
-correct. Verify each one and compare the **completed on song #N** line:
+It happens in roughly one round in six for a one-line round, and far more often in the
+later rounds — about a third of frame rounds and cover-all rounds end in a tie, because
+everyone is waiting on the same last songs. Both cards can be genuinely correct. Verify
+each one and compare the **finished on song #N** line:
 
-1. **Lower song number wins** — that card had bingo first, even if they shouted second.
+1. **Lower song number wins** — that card completed the pattern first, even if they
+   shouted second.
 2. **Same song number?** Then compare total squares marked (shown under the verdict) —
-   more marks means a fuller card.
+   more marks means a fuller card. This one can't separate a cover-all tie, where both
+   winners are on 25 of 25 by definition.
 3. **Still tied?** Both win. It's an anniversary party; hand out two prizes, or let the
-   couple pick.
+   couple pick. Worth having a spare prize for round 4 for exactly this reason.
 
 The **Round status** panel flags ties for you before you're standing there guessing.
 
@@ -211,7 +328,7 @@ The **Round status** panel flags ties for you before you're standing there guess
 
 ## Customising the songs
 
-All 200 songs live in [`data/songs.js`](data/songs.js) — 40 per decade. Each entry is:
+All 160 songs live in [`data/songs.js`](data/songs.js) — 40 per round. Each entry is:
 
 ```js
 ["Billie Jean", "Michael Jackson", 1983, 55]
@@ -221,9 +338,26 @@ All 200 songs live in [`data/songs.js`](data/songs.js) — 40 per decade. Each e
 Swap in the couple's own favourites, their wedding song, whatever. Two rules:
 
 - Keep **at least 25 songs** per round (24 squares plus a spare). Around 40 is the
-  sweet spot — fewer makes rounds end faster, more makes them drag.
+  sweet spot. For the frame and cover-all rounds a *smaller* pool doesn't save much
+  time — a card still needs 16 or 24 specific squares — and it makes ties much more
+  likely (a 26-song cover-all round ties about 72% of the time versus 38% at 40), so
+  leave those at 40.
 - After editing, re-run **Simulate this seed** and **reprint the cards**. Changing the
   song list changes every card.
+
+### Changing how a round is won
+
+Each round names its win condition in the same file:
+
+```js
+r3: { label: "Round 3 — Golden Oldies", tag: "oldies", goal: "frame", songs: [ ... ] }
+```
+
+`goal` takes `"line"`, `"twoLines"`, `"frame"` or `"blackout"`. The patterns, the
+expected pacing for each, and the little 5×5 icon all live in
+[`js/bingo.js`](js/bingo.js) — add a new goal there and any round can use it. The
+cards, run sheet, console tabs and verification panel all read the goal, so changing
+this one word updates every one of them.
 
 Cards are laid out with the FREE square in the centre and a `B I N G O` header, and
 each round prints in its own colour so the piles don't get mixed up.
@@ -236,8 +370,8 @@ Cards are regenerated from the seed, so a lost card is never a problem — the r
 identical to the original. `cards.html` accepts URL parameters:
 
 ```
-cards.html?from=17&to=17            # just guest #17, all five rounds
-cards.html?from=17&to=17&rounds=r2  # just guest #17's 90s card
+cards.html?from=17&to=17            # just guest #17, all four rounds
+cards.html?from=17&to=17&rounds=r2  # just guest #17's 1976 card
 cards.html?view=run                 # straight to the DJ run sheet
 cards.html?per=1                    # large print
 ```
@@ -254,7 +388,9 @@ the folder instead:
 python3 -m http.server 8777
 ```
 
-Then open `http://localhost:8777/cards.html` and `http://localhost:8777/dj.html`.
+Then open `http://localhost:8777/cards.html`, `http://localhost:8777/dj.html` and
+`http://localhost:8777/show.html`. Serving them is what lets the projector page follow
+the console — as `file://` they can't see each other.
 
 ---
 
@@ -283,10 +419,12 @@ right file.
 ```
 cards.html       card generator, DJ run sheet, print layout
 dj.html          DJ console: player, tracking, verification
-data/songs.js    the 200 songs, 40 per decade
-js/bingo.js      seeded card generation + win checking (shared by both pages)
+show.html        the projector slideshow: countdown, reveal, round recap
+data/songs.js    the 160 songs and each round's win condition, 40 per round
+js/bingo.js      seeded card generation + win checking (shared by all three pages)
 audio/           drop your music here (git-ignored)
 ```
 
 `js/bingo.js` is deliberately shared: the printer and the verifier must never be able
-to disagree about what's on a card.
+to disagree about what's on a card, and the projector must never disagree with either
+about the order songs come in.
