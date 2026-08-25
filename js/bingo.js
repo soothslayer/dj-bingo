@@ -101,6 +101,31 @@ var ALL_CELLS = (function () {
   return cells;
 })();
 
+var CORNER_CELLS = [[0, 0], [0, GRID - 1], [GRID - 1, 0], [GRID - 1, GRID - 1]];
+
+var X_CELLS = (function () {
+  var cells = [];
+  for (var r = 0; r < GRID; r++) for (var c = 0; c < GRID; c++) {
+    if (r === c || r + c === GRID - 1) cells.push([r, c]);
+  }
+  return cells;
+})();
+
+/* Every 2x2 block that does NOT touch the free centre. Including those four
+ * would let a "stamp" be won with three songs and a freebie, which both looks
+ * wrong on the card and can end the round after three songs. Twelve blocks it
+ * is, and every winning stamp is four songs the guest actually heard. */
+var STAMP_BLOCKS = (function () {
+  var out = [], cols = "BINGO";
+  for (var r = 0; r < GRID - 1; r++) for (var c = 0; c < GRID - 1; c++) {
+    var cells = [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]];
+    var touchesFree = cells.some(function (x) { return x[0] === 2 && x[1] === 2; });
+    if (touchesFree) continue;
+    out.push({ name: "Stamp " + cols[c] + (r + 1), cells: cells });
+  }
+  return out;
+})();
+
 /* `diagram` is what the pattern looks like on a card, for the little 5x5 icon
  * printed next to the round name. For the line goals it is one representative
  * arrangement, not the only way to win.
@@ -112,25 +137,53 @@ var ALL_CELLS = (function () {
 var GOALS = {
   line: {
     key: "line", pace: { ok: [8, 16], ideal: [10, 14] }, need: 1, patterns: LINES,
-    label: "One line", call: "BINGO",
+    label: "One line", call: "BINGO", unit: "line",
     rule: "One full line wins \u2014 any row, column or diagonal.",
     diagram: [[2,0],[2,1],[2,2],[2,3],[2,4]]
   },
   twoLines: {
     key: "twoLines", pace: { ok: [14, 22], ideal: [16, 20] }, need: 2, patterns: LINES,
-    label: "Two lines", call: "DOUBLE BINGO",
+    label: "Two lines", call: "DOUBLE BINGO", unit: "line",
     rule: "Two full lines win \u2014 any rows, columns or diagonals, and they may cross.",
     diagram: [[1,0],[1,1],[1,2],[1,3],[1,4],[3,0],[3,1],[3,2],[3,3],[3,4]]
   },
+  threeLines: {
+    key: "threeLines", pace: { ok: [18, 27], ideal: [20, 24] }, need: 3, patterns: LINES,
+    label: "Three lines", call: "TRIPLE BINGO", unit: "line",
+    rule: "Three full lines win \u2014 any rows, columns or diagonals.",
+    diagram: [[0,0],[0,1],[0,2],[0,3],[0,4],[2,0],[2,1],[2,2],[2,3],[2,4],[4,0],[4,1],[4,2],[4,3],[4,4]]
+  },
+  stamp: {
+    key: "stamp", pace: { ok: [5, 15], ideal: [7, 12] }, need: 1, patterns: STAMP_BLOCKS,
+    label: "Postage stamp", call: "STAMP", unit: "stamp",
+    rule: "Any 2\u00d72 block of four squares wins.",
+    diagram: [[0,0],[0,1],[1,0],[1,1]]
+  },
+  corners: {
+    key: "corners", pace: { ok: [10, 24], ideal: [14, 20] }, need: 1,
+    patterns: [{ name: "Four corners", cells: CORNER_CELLS }],
+    label: "Four corners", call: "CORNERS", unit: "shape",
+    rule: "All four corner squares win.",
+    diagram: CORNER_CELLS
+  },
+  x: {
+    key: "x", pace: { ok: [20, 32], ideal: [23, 29] }, need: 1,
+    patterns: [{ name: "The X", cells: X_CELLS }],
+    label: "The X", call: "THE X", unit: "shape",
+    rule: "Both diagonals \u2014 the X right across the card.",
+    diagram: X_CELLS
+  },
   frame: {
-    key: "frame", pace: { ok: [28, 36], ideal: [30, 34] }, need: 1, patterns: [{ name: "Picture frame", cells: FRAME_CELLS }],
-    label: "Picture frame", call: "FRAME",
+    key: "frame", pace: { ok: [28, 36], ideal: [30, 34] }, need: 1,
+    patterns: [{ name: "Picture frame", cells: FRAME_CELLS }],
+    label: "Picture frame", call: "FRAME", unit: "shape",
     rule: "The picture frame wins \u2014 all 16 squares around the outside edge.",
     diagram: FRAME_CELLS
   },
   blackout: {
-    key: "blackout", pace: { ok: [32, 39], ideal: [34, 38] }, need: 1, patterns: [{ name: "Full house", cells: ALL_CELLS }],
-    label: "Cover all", call: "FULL HOUSE",
+    key: "blackout", pace: { ok: [32, 39], ideal: [34, 38] }, need: 1,
+    patterns: [{ name: "Full house", cells: ALL_CELLS }],
+    label: "Cover all", call: "FULL HOUSE", unit: "shape",
     rule: "Cover all wins \u2014 every square on the card.",
     diagram: ALL_CELLS
   }
@@ -242,5 +295,6 @@ if (typeof module !== "undefined" && module.exports) {
     winningLines: winningLines, marksOnCard: marksOnCard, LINES: LINES, FREE: FREE,
     suggestedPlayOrder: suggestedPlayOrder, findDuplicateCards: findDuplicateCards,
     GOALS: GOALS, DEFAULT_GOAL: DEFAULT_GOAL, goalFor: goalFor, checkCard: checkCard,
-    goalDiagram: goalDiagram, FRAME_CELLS: FRAME_CELLS, ALL_CELLS: ALL_CELLS };
+    goalDiagram: goalDiagram, FRAME_CELLS: FRAME_CELLS, ALL_CELLS: ALL_CELLS,
+    CORNER_CELLS: CORNER_CELLS, X_CELLS: X_CELLS, STAMP_BLOCKS: STAMP_BLOCKS };
 }
