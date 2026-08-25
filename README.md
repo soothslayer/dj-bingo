@@ -5,15 +5,17 @@ Love Songs — each won a harder way than the last, with printable cards
 for every guest, a DJ console that plays 30-second snippets, and winner verification
 that actually proves the winner won.
 
-Two files, no install, no internet needed:
+Three files, no install, no internet needed:
 
 | File | Who uses it | What it does |
 |---|---|---|
 | [`cards.html`](cards.html) | You, before the party | Generates and prints numbered bingo cards |
 | [`dj.html`](dj.html) | The DJ, during the party | Plays snippets, tracks what's played, verifies winners |
+| [`show.html`](show.html) | The room, on the projector | Counts down each snippet, then reveals the song |
 
-Open either by double-clicking it, or serve the folder and visit
-`http://localhost:8777` (see [Running from a server](#running-from-a-server)).
+Open any of them by double-clicking, or serve the folder and visit
+`http://localhost:8777` (see [Running from a server](#running-from-a-server)). The
+projector page needs the server if you want it to follow the console automatically.
 
 ---
 
@@ -174,6 +176,61 @@ click **Save hooks**. They're stored in the browser and survive a reload.
 
 ---
 
+## On the projector
+
+`show.html` is the big screen: a countdown while the snippet plays, then a press to
+reveal the song and artist to the room. It reads the same song list and the same
+suggested play order as the console, so the screen and the speakers stay in step
+without the two pages needing to talk to each other.
+
+Open it, set the seed to match the console, pick your rounds, and hit **Start the
+show**. It goes fullscreen and needs nothing else.
+
+Each round runs as: a **title slide** with the round's name and how it's won (the
+pattern icon, big, so the room can see what they're playing for), then per song a
+**countdown** and a **reveal**, and finally a **recap** listing everything that round
+played — handy while people check their cards.
+
+| Key | Action |
+|---|---|
+| `space` / `→` / `PageDown` / a presenter clicker | Reveal, then on to the next song |
+| `←` / `PageUp` | Back |
+| `R` | Restart the countdown (use it if the music started late) |
+| `P` | Pause the countdown |
+| `B` | Blank the screen — for speeches, or between rounds |
+| `F` | Fullscreen |
+| `Esc` | Back to the setup screen |
+
+Clicking or tapping anywhere also advances, so the show can be driven from a phone.
+
+### Letting it follow the DJ console
+
+Tick **Follow the DJ console** and the projector drives itself: when the DJ hits
+**Play next**, the screen jumps to that song's countdown and starts counting. The
+reveal stays manual — that beat belongs to the DJ. It also picks up the console's
+snippet length, so changing 30 to 20 seconds mid-party changes the countdown too.
+
+This works through the browser's own storage, so it needs both pages open in the
+**same browser** and served from the **same address** (`http://localhost:8777/dj.html`
+and `http://localhost:8777/show.html`). Opened as `file://` the two pages can't see
+each other, and the show simply stays manual.
+
+The countdown starts when the console *marks* the song played, which is a moment
+before the audio actually begins if it's still fetching a preview. If it drifts, press
+`R` to restart the countdown in time with the music.
+
+### Joining late
+
+`show.html` takes the same URL parameters as the rest, plus a starting point:
+
+```
+show.html?round=r3                     # just the Golden Oldies round
+show.html?round=r3&start=12            # pick up at song 12
+show.html?snip=20&follow=1             # 20-second countdown, following the console
+```
+
+---
+
 ## Running the game
 
 Open `dj.html`, click **Load config…**, pick your `dj-bingo-config.json`, and confirm
@@ -183,7 +240,10 @@ the seed matches the cards. Then, for each round:
 2. Hit **▶︎ Play next**. It plays the next song in a suggested shuffled order and marks
    it as played automatically.
 3. Repeat. Give the room a beat between songs to find their squares.
-4. When someone shouts BINGO, go to **Verify a winner**.
+4. When someone shouts, go to **Verify a winner**.
+
+If you're projecting, open [`show.html`](show.html) on the second screen — see
+[On the projector](#on-the-projector).
 
 Keyboard, so you're not hunting for buttons in the dark:
 
@@ -307,7 +367,9 @@ the folder instead:
 python3 -m http.server 8777
 ```
 
-Then open `http://localhost:8777/cards.html` and `http://localhost:8777/dj.html`.
+Then open `http://localhost:8777/cards.html`, `http://localhost:8777/dj.html` and
+`http://localhost:8777/show.html`. Serving them is what lets the projector page follow
+the console — as `file://` they can't see each other.
 
 ---
 
@@ -336,10 +398,12 @@ right file.
 ```
 cards.html       card generator, DJ run sheet, print layout
 dj.html          DJ console: player, tracking, verification
-data/songs.js    the 200 songs, 40 per decade
-js/bingo.js      seeded card generation + win checking (shared by both pages)
+show.html        the projector slideshow: countdown, reveal, round recap
+data/songs.js    the 160 songs and each round's win condition, 40 per round
+js/bingo.js      seeded card generation + win checking (shared by all three pages)
 audio/           drop your music here (git-ignored)
 ```
 
 `js/bingo.js` is deliberately shared: the printer and the verifier must never be able
-to disagree about what's on a card.
+to disagree about what's on a card, and the projector must never disagree with either
+about the order songs come in.
