@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJ Bingo — Big Screen</title>
+<style>
+  :root{
+    --bg:#0d0c12; --ink:#f7f5ef; --muted:#8f89a0; --rule:#2b2937;
+    --r1:#f5b73d; --r2:#f97316; --r3:#2dd4bf; --r4:#a78bfa;
+    --accent:var(--r1);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+       font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+
+  /* ---------- setup screen ---------- */
+  [hidden]{display:none!important}
+  #setup{height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{width:min(560px,100%);background:#17161f;border:1px solid var(--rule);border-radius:14px;padding:24px 26px}
+  .box h1{font-size:22px;margin:0 0 4px}
+  .box p{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .box label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;
+       letter-spacing:.07em;color:var(--muted);margin:16px 0 6px}
+  .box input[type=text],.box input[type=number]{width:100%;font:inherit;background:#221f2c;color:var(--ink);
+       border:1px solid var(--rule);border-radius:8px;padding:9px 11px}
+  .rounds{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+  .rounds label{display:flex;align-items:center;gap:9px;margin:0;text-transform:none;letter-spacing:0;
+       font-size:14px;font-weight:500;color:var(--ink)}
+  .two{display:flex;gap:14px}
+  .two>div{flex:1}
+  #go{width:100%;margin-top:22px;font:inherit;font-weight:700;font-size:17px;padding:14px;
+       border-radius:10px;border:none;background:var(--r1);color:#14131a;cursor:pointer}
+  #go:hover{opacity:.9}
+  .keys{margin-top:18px;font-size:12.5px;color:var(--muted);line-height:1.9}
+  kbd{background:#221f2c;border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;
+      padding:1px 6px;font-size:11.5px;font-family:inherit}
+
+  /* ---------- stage ---------- */
+  #stage{height:100%;position:relative;cursor:none}
+  #stage.showcursor{cursor:default}
+  /* the slide fills the stage, so its flex centring is centring on the whole screen */
+  #slide{position:absolute;inset:0}
+  .slide{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         text-align:center;padding:5vmin 6vmin;animation:in .28s ease}
+  @keyframes in{from{opacity:0;transform:translateY(1.2vmin)}to{opacity:1;transform:none}}
+
+  .eyebrow{font-size:2.4vmin;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+           color:var(--accent);margin-bottom:1.4vmin}
+  .sub{color:var(--muted);font-size:2.6vmin;margin-top:1.6vmin}
+
+  /* intro */
+  .intro .name{font-size:8.5vmin;font-weight:800;line-height:1.05;color:var(--accent)}
+  .goalbox{display:flex;align-items:center;gap:2.4vmin;margin-top:5vmin;padding:2.4vmin 4vmin;
+           border:.3vmin solid var(--accent);border-radius:2vmin;color:var(--accent)}
+  .goalbox .gtext{text-align:left}
+  .goalbox .glabel{font-size:4.4vmin;font-weight:800;line-height:1.1;text-transform:uppercase;letter-spacing:.04em}
+  .goalbox .grule{font-size:2.4vmin;font-weight:500;color:var(--ink);opacity:.85;margin-top:.5vmin}
+  .goalbox .gd{width:13vmin;height:13vmin;flex:none}
+  .gd .on{fill:currentColor}
+  .gd .off{fill:none;stroke:currentColor;stroke-width:.55;opacity:.4}
+
+  /* timer */
+  .ringwrap{position:relative;width:42vmin;height:42vmin;margin:1vmin 0}
+  .ring{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring .track{fill:none;stroke:#241f30;stroke-width:6}
+  .ring .prog{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;
+        transition:stroke .3s}
+  .count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        font-size:16vmin;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .guess.done .ring .prog{stroke:var(--bad,#e0534f)}
+  .guess.done .count{color:#e0534f;animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.42}}
+  .prompt{font-size:4.6vmin;font-weight:700;letter-spacing:.02em}
+
+  /* reveal */
+  .reveal .title{font-size:11vmin;font-weight:800;line-height:1.04;max-width:92vw;overflow-wrap:break-word}
+  .reveal .title.long{font-size:8.6vmin}
+  .reveal .title.xlong{font-size:6.8vmin}
+  .reveal .artist{font-size:5.4vmin;font-weight:600;color:var(--accent);margin-top:2.4vmin}
+  .reveal .year{font-size:3vmin;color:var(--muted);margin-top:1.4vmin;font-variant-numeric:tabular-nums}
+
+  /* recap */
+  .recap .name{font-size:6vmin;font-weight:800;color:var(--accent);line-height:1.1}
+  .list{margin-top:4vmin;width:100%;max-width:92vw;columns:2;column-gap:6vmin;text-align:left;
+        font-size:2.5vmin;line-height:1.65}
+  .list.three{columns:3;font-size:2.1vmin}
+  .list div{break-inside:avoid;overflow-wrap:break-word}
+  .list b{font-weight:700}
+  .list span{color:var(--muted)}
+  .list i{color:var(--accent);font-style:normal;font-variant-numeric:tabular-nums;margin-right:.7em}
+
+  /* chrome */
+  #pos{position:fixed;right:2.6vmin;bottom:2.2vmin;font-size:2vmin;color:var(--muted);
+       font-variant-numeric:tabular-nums}
+  #round{position:fixed;left:2.6vmin;top:2.2vmin;display:flex;align-items:center;gap:1.4vmin}
+  #round .rnum{background:var(--accent);color:#14131a;font-size:2vmin;font-weight:800;letter-spacing:.12em;
+       text-transform:uppercase;padding:.5vmin 1.4vmin;border-radius:.7vmin;white-space:nowrap}
+  #round .rtheme{font-size:2.4vmin;font-weight:700;color:var(--ink);white-space:nowrap}
+  #round .rgoal{display:flex;align-items:center;gap:.7vmin;font-size:1.9vmin;font-weight:600;
+       color:var(--accent);opacity:.85;padding-left:1.2vmin;border-left:.25vmin solid var(--rule);
+       white-space:nowrap}
+  #round .rgoal .gd{width:2.4vmin;height:2.4vmin;flex:none}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:2.2vmin;font-size:1.9vmin;
+       color:var(--muted);opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap}
+  #hint.on{opacity:.85}
+  /* Someone shouted. Fills the screen so the room knows to stop and listen,
+     over the top of whatever slide is showing — the DJ's place is not lost. */
+  #bingo{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;align-items:center;
+       justify-content:center;text-align:center;padding:6vmin;background:var(--accent);color:#14131a}
+  #bingo.on{display:flex}
+  #bingo .word{font-size:19vmin;font-weight:800;line-height:.95;animation:pop .34s ease}
+  #bingo .word.long{font-size:13vmin}
+  @keyframes pop{from{transform:scale(.87);opacity:0}to{transform:none;opacity:1}}
+  #bingo .who{font-size:4.6vmin;font-weight:700;margin-top:3.4vmin}
+  #bingo .ctx{font-size:2.6vmin;font-weight:600;margin-top:1.6vmin;opacity:.72}
+  #callBtn{position:fixed;left:2.6vmin;bottom:2.2vmin;z-index:11;font:inherit;font-size:1.9vmin;
+       font-weight:700;padding:1.1vmin 2vmin;border-radius:1vmin;border:.2vmin solid var(--accent);
+       background:transparent;color:var(--accent);cursor:pointer;opacity:0;transition:opacity .4s;
+       pointer-events:none}
+  #callBtn.on{opacity:.9;pointer-events:auto}
+  #callBtn:hover{background:var(--accent);color:#14131a}
+  #black{position:fixed;inset:0;background:#000;display:none;z-index:20}
+  #black.on{display:block}
+  #follow{position:fixed;right:2.6vmin;top:2.2vmin;font-size:1.9vmin;color:var(--accent);
+       opacity:.75;display:none}
+  #follow.on{display:block}
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <div class="box">
+    <h1>DJ Bingo — Big Screen</h1>
+    <p>The slideshow for the projector: a countdown while the snippet plays, then press to reveal
+       the song and artist. Same play order as the DJ console, so the screen always matches the room.</p>
+
+    <label for="seed">Master seed <span style="text-transform:none;letter-spacing:0;font-weight:400">(must match the console)</span></label>
+    <input type="text" id="seed" value="ANNIVERSARY-50-6">
+
+    <label for="occasion">Occasion line</label>
+    <input type="text" id="occasion" value="Bob &amp; Carol — 50th Anniversary">
+
+    <div class="two">
+      <div>
+        <label for="snip">Countdown (seconds)</label>
+        <input type="number" id="snip" value="30" min="5" max="120">
+      </div>
+      <div>
+        <label for="startAt">Start at song #</label>
+        <input type="number" id="startAt" value="1" min="1">
+      </div>
+    </div>
+
+    <label>Rounds</label>
+    <div class="rounds" id="roundChecks"></div>
+
+    <div class="rounds" style="margin-top:14px">
+      <label><input type="checkbox" id="followChk"> Follow the DJ console automatically
+        <span style="color:var(--muted);font-size:12.5px">(same browser, both pages served from the same address)</span></label>
+    </div>
+
+    <button id="go">Start the show</button>
+
+    <div class="keys">
+      <kbd>space</kbd> / <kbd>→</kbd> / clicker — reveal, then next song &nbsp;·&nbsp;
+      <kbd>←</kbd> back<br>
+      <kbd>X</kbd> someone called it &mdash; puts it on the screen<br>
+      <kbd>R</kbd> restart the countdown &nbsp;·&nbsp; <kbd>P</kbd> pause it &nbsp;·&nbsp;
+      <kbd>B</kbd> blank the screen &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp;
+      <kbd>Esc</kbd> back to this screen
+    </div>
+  </div>
+</div>
+
+<div id="stage" hidden>
+  <div id="slide"></div>
+  <div id="round"></div>
+  <div id="pos"></div>
+  <div id="follow">● following the console</div>
+  <div id="hint"></div>
+  <button id="callBtn">Someone called it!</button>
+  <div id="bingo"></div>
+  <div id="black"></div>
+</div>
+
+<script src="data/songs.js"></script>
+<script src="js/bingo.js"></script>
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s).replace(/[&<>"]/g, function(m){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
+
+var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
+
+/* Round labels read "Round 3 — Golden Oldies"; the number and the theme go in
+ * different places on the slide, so split them. A label without the dash still
+ * gets a number, taken from the round's position. */
+function roundParts(rk){
+  var label = SONGS[rk].label, cut = label.indexOf("\u2014");
+  var no = ROUND_KEYS.indexOf(rk) + 1;
+  return {
+    no: no,
+    num: cut > 0 ? label.slice(0, cut).trim() : "Round " + no,
+    theme: cut > 0 ? label.slice(cut + 1).trim() : label
+  };
+}
+
+/* ---------- setup ---------- */
+ROUND_KEYS.forEach(function(rk){
+  var l = document.createElement("label");
+  l.innerHTML = '<input type="checkbox" value="'+rk+'" checked> '+esc(SONGS[rk].label)+
+                ' <span style="color:var(--muted);font-size:12.5px">'+esc(goalFor(rk).label)+'</span>';
+  $("roundChecks").appendChild(l);
+});
+
+/* The console remembers the seed it last used and the snippet length set on the
+   night; if this page is opened on the same laptop, start from those. */
+try{
+  var last = localStorage.getItem("djbingo:lastSeed");
+  if (last) $("seed").value = last;
+  var saved = last && localStorage.getItem("djbingo:" + last);
+  if (saved){ var sd = JSON.parse(saved); if (sd && sd.snip) $("snip").value = sd.snip; }
+}catch(e){}
+
+/* URL parameters, so the projector laptop can be sent straight to the right place:
+   show.html?round=r3&seed=ANNIVERSARY-50-6&snip=20&follow=1&start=7 */
+var q = new URLSearchParams(location.search);
+if (q.get("seed")) $("seed").value = q.get("seed");
+if (q.get("occasion")) $("occasion").value = q.get("occasion");
+if (q.get("snip")) $("snip").value = q.get("snip");
+if (q.get("start")) $("startAt").value = q.get("start");
+if (q.get("follow")) $("followChk").checked = q.get("follow") !== "0";
+if (q.get("round") || q.get("rounds")){
+  var want = (q.get("round") || q.get("rounds")).split(",");
+  $("roundChecks").querySelectorAll("input").forEach(function(i){
+    i.checked = want.indexOf(i.value) >= 0;
+  });
+}
+
+function selectedRounds(){
+  var got = [].slice.call($("roundChecks").querySelectorAll("input:checked"))
+              .map(function(i){ return i.value; });
+  return got.length ? got : ROUND_KEYS.slice();
+}
+
+/* ---------- the deck ----------
+ *
+ * Two slides per song — the countdown, then the answer — wrapped in a title slide
+ * that puts the round's win condition on the wall, and closed by a recap of
+ * everything the room actually heard. Songs run in the console's suggested play
+ * order, so screen and speakers stay in step without either page talking to the
+ * other. */
+var show = { deck: [], i: 0, seed: "", occasion: "", snip: 30, follow: false,
+             seen: {} };   // seen[rk] = furthest song number revealed in that round
+
+function buildDeck(rounds, seed){
+  var deck = [];
+  rounds.forEach(function(rk){
+    var order = suggestedPlayOrder(rk, seed);
+    deck.push({ kind:"intro", rk:rk });
+    order.forEach(function(idx, i){
+      deck.push({ kind:"guess",  rk:rk, idx:idx, n:i+1, total:order.length });
+      deck.push({ kind:"reveal", rk:rk, idx:idx, n:i+1, total:order.length });
+    });
+    deck.push({ kind:"recap", rk:rk, order:order });
+  });
+  return deck;
+}
+
+/* ---------- countdown ---------- */
+var CIRC = 2 * Math.PI * 45;
+var timer = { end:0, left:0, paused:false, raf:0, len:30 };
+
+function stopTimer(){ if (timer.raf) cancelAnimationFrame(timer.raf); timer.raf = 0; }
+
+function startTimer(seconds){
+  stopTimer();
+  timer.len = seconds;
+  timer.paused = false;
+  timer.left = seconds * 1000;
+  timer.end = Date.now() + timer.left;
+  tick();
+}
+
+function tick(){
+  var el = $("slide").querySelector(".guess");
+  if (!el) return stopTimer();
+  if (!timer.paused) timer.left = Math.max(0, timer.end - Date.now());
+  var frac = timer.len ? timer.left / (timer.len * 1000) : 0;
+  var prog = el.querySelector(".prog"), num = el.querySelector(".count");
+  if (prog) prog.style.strokeDashoffset = CIRC * (1 - frac);
+  if (num) num.textContent = Math.ceil(timer.left / 1000);
+  el.classList.toggle("done", timer.left <= 0);
+  timer.raf = requestAnimationFrame(tick);
+}
+
+function setPaused(p){
+  if (timer.paused === p) return;
+  timer.paused = p;
+  if (!p) timer.end = Date.now() + timer.left;              // resume from where it stopped
+}
+
+function togglePause(){
+  if (!$("slide").querySelector(".guess")) return;
+  setPaused(!timer.paused);
+  flashHint(timer.paused ? "Countdown paused — P to resume" : "Counting down again");
+}
+
+/* ---------- rendering ---------- */
+function titleClass(t){ return t.length > 34 ? "xlong" : (t.length > 20 ? "long" : ""); }
+
+function render(){
+  var s = show.deck[show.i];
+  if (!s) return;
+  stopTimer();
+
+  var rk = s.rk, goal = goalFor(rk), part = roundParts(rk), html = "";
+  document.documentElement.style.setProperty("--accent", ACC[rk]);
+
+  /* Which round, what it is, and how it is won — on screen for every slide, so
+     anyone looking up mid-round knows where they are. */
+  $("round").innerHTML = '<span class="rnum">'+esc(part.num)+'</span>'+
+    '<span class="rtheme">'+esc(part.theme)+'</span>'+
+    '<span class="rgoal">'+goalDiagram(goal, 100)+esc(goal.label)+'</span>';
+
+  if (s.kind === "intro"){
+    html = '<div class="slide intro">'+
+      '<div class="eyebrow">'+esc(show.occasion)+'</div>'+
+      '<div class="name">'+esc(SONGS[rk].label)+'</div>'+
+      '<div class="goalbox">'+goalDiagram(goal, 100)+
+        '<div class="gtext"><div class="glabel">'+esc(goal.label)+'</div>'+
+        '<div class="grule">'+esc(goal.rule)+'</div></div></div>'+
+      '<div class="sub">'+SONGS[rk].songs.length+' songs in the hat &middot; press to begin</div></div>';
+    $("pos").textContent = "";
+  }
+  else if (s.kind === "guess"){
+    html = '<div class="slide guess">'+
+      '<div class="eyebrow">'+esc(part.num)+' &middot; '+esc(part.theme)+' &middot; Song '+s.n+'</div>'+
+      '<div class="prompt">Name that tune</div>'+
+      '<div class="ringwrap"><svg class="ring" viewBox="0 0 100 100">'+
+        '<circle class="track" cx="50" cy="50" r="45"/>'+
+        '<circle class="prog" cx="50" cy="50" r="45" stroke-dasharray="'+CIRC+'" stroke-dashoffset="0"/>'+
+      '</svg><div class="count">'+show.snip+'</div></div>'+
+      '<div class="sub">Mark your card &mdash; then we’ll see it</div></div>';
+    $("pos").textContent = s.n + " / " + s.total;
+  }
+  else if (s.kind === "reveal"){
+    var song = SONGS[rk].songs[s.idx];
+    show.seen[rk] = Math.max(show.seen[rk] || 0, s.n);
+    html = '<div class="slide reveal">'+
+      '<div class="eyebrow">'+esc(part.num)+' &middot; '+esc(part.theme)+' &middot; Song '+s.n+'</div>'+
+      '<div class="title '+titleClass(song[0])+'">'+esc(song[0])+'</div>'+
+      '<div class="artist">'+esc(song[1])+'</div>'+
+      '<div class="year">'+song[2]+'</div></div>';
+    $("pos").textContent = s.n + " / " + s.total;
+  }
+  else if (s.kind === "recap"){
+    var seen = show.seen[rk] || 0;
+    var rows = "";
+    for (var i = 0; i < seen; i++){
+      var t = SONGS[rk].songs[s.order[i]];
+      rows += '<div><i>'+(i+1)+'</i><b>'+esc(t[0])+'</b> <span>&mdash; '+esc(t[1])+'</span></div>';
+    }
+    html = '<div class="slide recap">'+
+      '<div class="eyebrow">'+esc(part.num)+' &middot; that was</div>'+
+      '<div class="name">'+esc(SONGS[rk].label)+'</div>'+
+      (seen ? '<div class="list'+(seen > 14 ? " three" : "")+'">'+rows+'</div>'
+            : '<div class="sub">No songs played in this round yet.</div>')+
+      '<div class="sub">'+esc(goal.rule)+'</div></div>';
+    $("pos").textContent = "";
+  }
+
+  $("slide").innerHTML = html;
+  if (s.kind === "guess") startTimer(show.snip);
+}
+
+/* ---------- navigation ---------- */
+function go(i){
+  show.i = Math.max(0, Math.min(show.deck.length - 1, i));
+  render();
+}
+function next(){ if (show.i < show.deck.length - 1) go(show.i + 1); }
+function prev(){ if (show.i > 0) go(show.i - 1); }
+
+/* Jump to a particular song's countdown — used when following the console. */
+function goToSong(rk, idx){
+  for (var i = 0; i < show.deck.length; i++){
+    var s = show.deck[i];
+    if (s.kind === "guess" && s.rk === rk && s.idx === idx){ go(i); return true; }
+  }
+  return false;
+}
+
+/* ---------- following the DJ console ----------
+ *
+ * The console writes its played list to localStorage on every song. A storage
+ * event only fires in OTHER tabs of the same origin, which is exactly this one:
+ * so when the DJ hits Play, the projector jumps to that song and starts counting
+ * without anyone touching this laptop. The reveal stays manual — that beat
+ * belongs to the DJ. */
+var lastPlayed = {};
+
+function snapshot(played){
+  var o = {};
+  ROUND_KEYS.forEach(function(rk){ o[rk] = (played && played[rk] ? played[rk].length : 0); });
+  return o;
+}
+
+function readConsole(){
+  try{ return JSON.parse(localStorage.getItem("djbingo:" + show.seed) || "null"); }
+  catch(e){ return null; }
+}
+
+function onConsoleWrite(data){
+  if (!data) return;
+  if (data.snip) show.snip = Math.max(5, Math.min(120, data.snip));
+  var played = data.played || {};
+  for (var i = 0; i < ROUND_KEYS.length; i++){
+    var rk = ROUND_KEYS[i], list = played[rk] || [];
+    if (list.length > (lastPlayed[rk] || 0)){        // this round just gained a song
+      lastPlayed = snapshot(played);
+      if (goToSong(rk, list[list.length - 1])) flashHint("Following the console — " + SONGS[rk].label);
+      return;
+    }
+  }
+  lastPlayed = snapshot(played);
+}
+
+window.addEventListener("storage", function(e){
+  if (!show.follow || e.key !== "djbingo:" + show.seed || !e.newValue) return;
+  try{ onConsoleWrite(JSON.parse(e.newValue)); }catch(err){}
+});
+
+/* ---------- someone called it ----------
+ *
+ * An overlay rather than a slide: the DJ interrupts the room, checks the card on
+ * the console, and dismisses it back to exactly the song they were on. The word
+ * is whatever this round's win is actually called, so round 3 says FRAME rather
+ * than BINGO and the room learns the rule by seeing it. */
+var callAutoPaused = false;
+
+function callIsUp(){ return $("bingo").classList.contains("on"); }
+
+function showCall(){
+  var s = show.deck[show.i];
+  if (!s || callIsUp()) return;
+  var goal = goalFor(s.rk), part = roundParts(s.rk);
+  var songs = (s.kind === "guess" || s.kind === "reveal") ? s.n : 0;
+
+  $("bingo").innerHTML =
+    '<div class="word'+(goal.call.length > 6 ? " long" : "")+'">'+esc(goal.call)+'!</div>'+
+    '<div class="who">Card number, please</div>'+
+    '<div class="ctx">'+esc(part.num)+' &middot; '+esc(part.theme)+' &middot; '+esc(goal.rule)+
+    (songs ? ' &middot; ' + songs + ' song' + (songs === 1 ? '' : 's') + ' in' : '')+'</div>';
+  $("bingo").classList.add("on");
+
+  /* Freeze the clock while the room is stopped; it picks up where it left off. */
+  if ($("slide").querySelector(".guess") && !timer.paused){ setPaused(true); callAutoPaused = true; }
+}
+
+function hideCall(){
+  if (!callIsUp()) return false;
+  $("bingo").classList.remove("on");
+  if (callAutoPaused){ setPaused(false); callAutoPaused = false; }
+  return true;
+}
+
+/* ---------- chrome ---------- */
+var hintTimer = null;
+function flashHint(msg){
+  var h = $("hint");
+  h.textContent = msg || "space reveal · ← back · X someone called it · R restart · B blank · F fullscreen";
+  h.classList.add("on");
+  $("callBtn").classList.add("on");
+  $("stage").classList.add("showcursor");
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(function(){
+    h.classList.remove("on");
+    $("callBtn").classList.remove("on");
+    $("stage").classList.remove("showcursor");
+  }, 2600);
+}
+
+function fullscreen(){
+  if (document.fullscreenElement) { if (document.exitFullscreen) document.exitFullscreen(); }
+  else if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(function(){});
+  }
+}
+
+function start(){
+  show.seed = $("seed").value.trim() || "ANNIVERSARY-50-6";
+  show.occasion = $("occasion").value.trim();
+  show.snip = Math.max(5, Math.min(120, parseInt($("snip").value, 10) || 30));
+  show.follow = $("followChk").checked;
+  show.seen = {};
+  show.deck = buildDeck(selectedRounds(), show.seed);
+
+  /* "Start at song 7" means the seventh countdown of the first round, for when
+     the show is opened after the round has already begun. */
+  var at = Math.max(1, parseInt($("startAt").value, 10) || 1);
+  show.i = 0;
+  if (at > 1){
+    for (var i = 0, n = 0; i < show.deck.length; i++){
+      if (show.deck[i].kind === "guess" && ++n === at){ show.i = i; break; }
+    }
+  }
+
+  if (show.follow){
+    var d = readConsole();
+    lastPlayed = snapshot(d && d.played);
+    if (d && d.snip) show.snip = Math.max(5, Math.min(120, d.snip));
+    $("follow").classList.add("on");
+  }
+
+  $("setup").hidden = true;
+  $("stage").hidden = false;
+  fullscreen();
+  render();
+  flashHint();
+}
+
+function backToSetup(){
+  stopTimer();
+  $("stage").hidden = true;
+  $("setup").hidden = false;
+  $("follow").classList.remove("on");
+}
+
+$("go").onclick = start;
+
+document.addEventListener("keydown", function(e){
+  if (!$("setup").hidden){
+    if (e.key === "Enter") { e.preventDefault(); start(); }
+    return;
+  }
+  var k = e.key;
+  if (k === "x" || k === "X"){
+    e.preventDefault(); if (!hideCall()) showCall(); return;
+  }
+  /* While the call is up, the clicker dismisses it instead of moving the deck —
+     one press to carry on, whichever button the DJ's thumb finds. */
+  if (callIsUp() && (k === " " || k === "Spacebar" || k === "Enter" || k === "Escape" ||
+                     k === "ArrowRight" || k === "ArrowLeft" || k === "PageDown" || k === "PageUp")){
+    e.preventDefault(); hideCall(); return;
+  }
+  if (k === " " || k === "Spacebar" || k === "ArrowRight" || k === "PageDown" || k === "Enter"){
+    e.preventDefault(); next();
+  } else if (k === "ArrowLeft" || k === "PageUp" || k === "Backspace"){
+    e.preventDefault(); prev();
+  } else if (k === "r" || k === "R"){
+    if ($("slide").querySelector(".guess")){ startTimer(show.snip); flashHint("Countdown restarted"); }
+  } else if (k === "p" || k === "P"){
+    togglePause();
+  } else if (k === "b" || k === "B"){
+    $("black").classList.toggle("on");
+  } else if (k === "f" || k === "F"){
+    fullscreen();
+  } else if (k === "Escape"){
+    if (!document.fullscreenElement) backToSetup();
+  } else if (k === "Home"){
+    go(0);
+  }
+});
+
+/* A tap anywhere advances, so the show can be driven from a phone or a trackpad.
+   The blanked screen only un-blanks. */
+$("callBtn").addEventListener("click", function(e){
+  e.stopPropagation();                 // the stage advances on click; this must not
+  showCall();
+});
+
+$("stage").addEventListener("click", function(){
+  if ($("black").classList.contains("on")){ $("black").classList.remove("on"); return; }
+  if (hideCall()) return;
+  next();
+});
+$("stage").addEventListener("mousemove", function(){ flashHint(); });
+})();
+</script>
+</body>
+</html>

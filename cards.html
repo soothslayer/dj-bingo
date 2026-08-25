@@ -7,7 +7,7 @@
 <style>
   :root{
     --ink:#1b1a17; --muted:#6b6559; --rule:#d8d0c0; --paper:#fff;
-    --r1:#b7791f; --r2:#c2410c; --r3:#0f766e; --r4:#6d28d9; --r5:#be123c;
+    --r1:#b7791f; --r2:#c2410c; --r3:#0f766e; --r4:#6d28d9;
   }
   *{box-sizing:border-box}
   body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -44,6 +44,10 @@
         border-bottom:2px solid var(--accent);padding-bottom:5px;margin-bottom:6px}
   .occasion{font-size:8.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .round{font-size:15pt;font-weight:800;color:var(--accent);line-height:1.1}
+  .goal{display:flex;align-items:center;gap:5px;color:var(--accent);margin-top:2px}
+  .goal .gl{font-size:8.5pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .gd .on{fill:currentColor}
+  .gd .off{fill:none;stroke:currentColor;stroke-width:.55;opacity:.45}
   .who{text-align:right}
   .who .num{font-size:19pt;font-weight:800;line-height:1}
   .who .name{font-size:9.5pt;color:var(--muted);max-width:2.4in;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -75,6 +79,7 @@
   .sheet.one .who .num{font-size:30pt}
   .sheet.one .who .name{font-size:13pt;max-width:3.4in}
   .sheet.one .occasion{font-size:11pt}
+  .sheet.one .goal .gl{font-size:12pt}
   .sheet.one .bingo-hdr div{font-size:20pt}
   .sheet.one .cell.free .t{font-size:16pt}
   .sheet.one .card-foot{font-size:8pt}
@@ -125,7 +130,7 @@
     <div class="row">
       <div>
         <label for="seed">Master seed <span style="font-weight:400;color:var(--muted)">(must match the DJ console)</span></label>
-        <input type="text" id="seed" value="ANNIVERSARY-50">
+        <input type="text" id="seed" value="ANNIVERSARY-50-6">
       </div>
       <div>
         <label for="occasion">Occasion line</label>
@@ -140,11 +145,11 @@
     <div class="checks" id="roundChecks"></div>
     <label style="margin-top:14px">Layout</label>
     <div class="checks">
-      <label><input type="radio" name="per" value="2" checked> 2 cards per page <span style="color:var(--muted)">(recommended — 5 rounds = 3 sheets per guest, duplex)</span></label>
+      <label><input type="radio" name="per" value="2" checked> 2 cards per page <span style="color:var(--muted)">(recommended — 4 rounds = 2 sheets per guest, duplex)</span></label>
       <label><input type="radio" name="per" value="1"> 1 per page (large print)</label>
     </div>
     <div class="checks" style="margin-top:8px">
-      <label><input type="checkbox" id="groupByGuest" checked> Group by guest <span style="color:var(--muted)">(all 5 rounds together — best for duplex)</span></label>
+      <label><input type="checkbox" id="groupByGuest" checked> Group by guest <span style="color:var(--muted)">(all 4 rounds together — best for duplex)</span></label>
     </div>
   </fieldset>
 
@@ -157,8 +162,13 @@
   <fieldset>
     <legend>Seed check</legend>
     <p class="note" style="margin-top:0">Because every card is derived from the seed, the whole game can be simulated
-       before you print. A good seed gives each round roughly 9&ndash;15 songs before the first bingo.</p>
-    <div class="actions">
+       before you print &mdash; including how long it will run. Each round is judged against its own
+       win condition, since a picture frame needs most of the pool played and a line does not.</p>
+    <div class="row" style="max-width:290px">
+      <div><label for="snipEst">Snippet length (seconds)</label>
+      <input type="number" id="snipEst" value="30" min="5" max="90"></div>
+    </div>
+    <div class="actions" style="margin-top:12px">
       <button class="ghost" id="checkSeed">Simulate this seed</button>
       <button class="ghost" id="rollSeed">Find a well-paced seed</button>
     </div>
@@ -180,7 +190,7 @@
 <script src="js/bingo.js"></script>
 <script>
 (function(){
-  var ACCENT = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)", r5:"var(--r5)" };
+  var ACCENT = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
   var $ = function(id){ return document.getElementById(id); };
 
   /* round checkboxes */
@@ -195,7 +205,7 @@
   }
   function cfg(){
     return {
-      seed: $("seed").value.trim() || "ANNIVERSARY-50",
+      seed: $("seed").value.trim() || "ANNIVERSARY-50-6",
       occasion: $("occasion").value.trim(),
       from: Math.max(1, parseInt($("from").value,10) || 1),
       to:   Math.max(1, parseInt($("to").value,10) || 40),
@@ -217,6 +227,7 @@
   function cardEl(roundKey, cardNo, c){
     var grid = buildCard(roundKey, cardNo, c.seed);
     var pool = SONGS[roundKey].songs;
+    var goal = goalFor(roundKey);
     var card = document.createElement("div");
     card.className = "card";
     card.style.setProperty("--accent", ACCENT[roundKey]);
@@ -237,13 +248,14 @@
     card.innerHTML =
       '<div class="card-head">'+
         '<div><div class="occasion">'+esc(c.occasion)+'</div>'+
-        '<div class="round">'+esc(SONGS[roundKey].label)+'</div></div>'+
+        '<div class="round">'+esc(SONGS[roundKey].label)+'</div>'+
+        '<div class="goal">'+goalDiagram(goal, 15)+'<span class="gl">'+esc(goal.label)+'</span></div></div>'+
         '<div class="who"><div class="num">#'+cardNo+'</div>'+
         '<div class="name">'+esc(nameFor(c.names, cardNo))+'</div></div>'+
       '</div>'+
       '<div class="bingo-hdr"><div>B</div><div>I</div><div>N</div><div>G</div><div>O</div></div>'+
       '<div class="grid">'+cells+'</div>'+
-      '<div class="card-foot"><span>Mark a square when you hear the song. Five in a row wins.</span>'+
+      '<div class="card-foot"><span>Mark a square when you hear the song. '+esc(goal.rule)+'</span>'+
       '<span>'+esc(c.seed)+' &middot; '+roundKey.toUpperCase()+' &middot; card '+cardNo+'</span></div>';
     return card;
   }
@@ -295,33 +307,62 @@
   window.addEventListener("resize", scalePreview);
 
   /* ---- seed simulation ---- */
+  /* A song costs its snippet plus the beat it takes the room to find the square. */
+  var GAP_SECONDS = 10;
+  var OVERHEAD_MIN = 10;      // intros, verifying winners, handing out prizes
+  var TARGET_MIN = 60;
+  function perSong(){ return Math.max(5, parseInt($("snipEst").value, 10) || 30) + GAP_SECONDS; }
+
+  /* The number people actually care about: does the whole thing fit the slot? */
+  function budgetLine(songs){
+    var per = perSong(), music = songs * per / 60, all = music + OVERHEAD_MIN;
+    var txt = '<b>'+Math.round(music)+' min</b> of music, about <b>'+Math.round(all)+
+              ' min</b> all in (allowing '+OVERHEAD_MIN+' min for intros, verifying and prizes).';
+    if (all <= TARGET_MIN) return txt + ' Inside the '+TARGET_MIN+'-minute target.';
+    var at20 = songs * (20 + GAP_SECONDS) / 60 + OVERHEAD_MIN;
+    return txt + ' <b>Over the '+TARGET_MIN+'-minute target by '+Math.ceil(all - TARGET_MIN)+
+           ' min.</b> A 20-second snippet would bring it to about '+Math.round(at20)+
+           ' min; otherwise give a round an easier win condition.';
+  }
+
   function simulateSeed(seed, from, to, rounds){
     var res = [];
     rounds.forEach(function(rk){
+      var goal = goalFor(rk);
       var cards = [];
       for (var n=from;n<=to;n++) cards.push({no:n, grid:buildCard(rk,n,seed)});
       var order = suggestedPlayOrder(rk, seed), k, winners = [];
       for (k=1;k<=order.length;k++){
         var play = order.slice(0,k);
-        winners = cards.filter(function(c){ return winningLines(c.grid, play).length; });
+        winners = cards.filter(function(c){ return checkCard(c.grid, play, goal).won; });
         if (winners.length) break;
       }
-      res.push({round:rk, songs:k, winners:winners.map(function(w){return w.no;})});
+      res.push({round:rk, goal:goal, songs:k, ran:k<=order.length,
+                winners:winners.map(function(w){return w.no;})});
     });
     return res;
   }
 
+  /* Each goal has its own comfortable range — a frame or a full house needs most
+     of the pool played, so 30-odd songs is normal there and would be alarming in
+     a one-line round. */
   function renderSim(seed, res){
-    var bad = res.filter(function(r){ return r.songs < 8 || r.songs > 16; });
+    var bad = res.filter(function(r){ return !r.ran || r.songs < r.goal.pace.ok[0] || r.songs > r.goal.pace.ok[1]; });
+    var total = 0;
     var html = res.map(function(r){
-      return "<div><b>"+SONGS[r.round].label+"</b>: first bingo after <b>"+r.songs+
-             "</b> songs &mdash; card"+(r.winners.length>1?"s":"")+" #"+r.winners.join(", #")+
+      total += r.songs;
+      var mins = Math.round(r.songs * perSong() / 60);
+      if (!r.ran) return "<div><b>"+SONGS[r.round].label+"</b>: <em>nobody completes the "+
+                         esc(r.goal.label.toLowerCase())+" \u2014 the pool runs out first.</em></div>";
+      return "<div><b>"+SONGS[r.round].label+"</b> ("+esc(r.goal.label.toLowerCase())+"): first winner after <b>"+
+             r.songs+"</b> songs, ~"+mins+" min &mdash; card"+(r.winners.length>1?"s":"")+" #"+r.winners.join(", #")+
              (r.winners.length>1?" <em>(tie &mdash; see tiebreak in README)</em>":"")+"</div>";
     }).join("");
     $("seedResult").innerHTML = '<div class="'+(bad.length?"warn":"ok")+'"><div style="margin-bottom:6px">'+
-      'Seed <b>'+esc(seed)+'</b>'+(bad.length? " &mdash; one or more rounds are outside the comfortable 8&ndash;16 song range."
+      'Seed <b>'+esc(seed)+'</b>'+(bad.length? " &mdash; one or more rounds fall outside the comfortable range for how they are won."
                                              : " &mdash; all rounds well paced.")+'</div>'+html+
-      '<div style="margin-top:6px;opacity:.8">Assumes the DJ follows the suggested play order in the console.</div></div>';
+      '<div style="margin-top:8px">'+budgetLine(total)+'</div>'+
+      '<div style="margin-top:6px;opacity:.8">Assumes the DJ follows the suggested play order.</div></div>';
   }
 
   $("checkSeed").onclick = function(){
@@ -337,10 +378,16 @@
     for (var i=1;i<=400;i++){
       var cand = base + "-" + i;
       var res = simulateSeed(cand, c.from, c.to, rounds);
-      var good = res.every(function(r){ return r.songs>=10 && r.songs<=14 && r.winners.length===1; });
+      var songs = res.reduce(function(a, r){ return a + r.songs; }, 0);
+      var fits = songs * perSong() / 60 + OVERHEAD_MIN <= TARGET_MIN;
+      var good = fits && res.every(function(r){
+        return r.ran && r.songs >= r.goal.pace.ideal[0] && r.songs <= r.goal.pace.ideal[1] && r.winners.length === 1;
+      });
       if (good){ $("seed").value = cand; renderSim(cand, res); return; }
     }
-    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries hit 10&ndash;14 songs with a single winner in every round. Try a different base seed.</div>';
+    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries fitted the clock with every round in its ideal range and a '+
+      'single winner. Ties get commoner the more of the card a round asks for &mdash; try a different base seed, '+
+      'a shorter snippet, or accept a tie and use the tiebreak.</div>';
   };
 
   $("exportCfg").onclick = function(){
@@ -403,11 +450,15 @@
       };
       var cols = '<div class="rs-cols">'+table(0, half)+table(half, order.length)+'</div>';
 
+      var goal = goalFor(rk);
       var d = document.createElement("div");
       d.className = "runsheet";
       d.style.setProperty("--accent2", ACCENT[rk]);
       d.innerHTML =
         '<h3>'+esc(SONGS[rk].label)+' &mdash; DJ run sheet</h3>'+
+        '<div class="rs-sub" style="color:var(--accent2);font-weight:700">'+
+        esc(goal.label.toUpperCase())+' &mdash; '+esc(goal.rule)+
+        ' Expect around '+goal.pace.ideal[0]+'&ndash;'+goal.pace.ideal[1]+' songs.</div>'+
         '<div class="rs-sub">'+esc(c.occasion)+' &middot; seed '+esc(c.seed)+
         ' &middot; cards '+c.from+'&ndash;'+c.to+
         ' &middot; tick each song as you play it, and keep the order &mdash; '+

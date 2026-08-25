@@ -10,7 +10,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 STAGE=.deploy
-SITE=(index.html cards.html dj.html data js)
+SITE=(index.html cards.html dj.html show.html data js)
 
 rm -rf "$STAGE"
 mkdir -p "$STAGE"

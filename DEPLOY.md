@@ -125,11 +125,11 @@ below unless you also set a build command that stages them out.
 
 ## What gets published
 
-`deploy.sh` copies exactly five files into a temporary `.deploy/` directory and
+`deploy.sh` copies exactly six files into a temporary `.deploy/` directory and
 uploads only those:
 
 ```
-index.html  cards.html  dj.html  data/songs.js  js/bingo.js
+index.html  cards.html  dj.html  show.html  data/songs.js  js/bingo.js
 ```
 
 This matters more than it looks. `wrangler pages deploy` uploads **everything** in
@@ -137,7 +137,7 @@ the directory you point it at, skipping only a hardcoded list (`.git`,
 `node_modules`, `.DS_Store`, `.wrangler`). It does **not** read `.gitignore`, and it
 does **not** read `.assetsignore` — that file is a Workers static-assets feature and
 is silently ignored on the Pages upload path. Deploying the repo root directly would
-therefore publish `README.md`, this file, `wrangler.toml`, and `.claude/`.
+therefore publish `README.md`, this file, `wrangler.toml`, `test/`, and `.claude/`.
 
 None of those contain secrets, so this is tidiness rather than a security hole — but
 it's the reason for the staging step rather than a bare `wrangler pages deploy`.
