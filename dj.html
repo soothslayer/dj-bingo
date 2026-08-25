@@ -105,7 +105,7 @@
   <header>
     <h1>DJ Bingo — Console</h1>
     <div class="rowflex">
-      <div class="seedbox">Master seed <input type="text" id="seed" value="ANNIVERSARY-50"></div>
+      <div class="seedbox">Master seed <input type="text" id="seed" value="ANNIVERSARY-50-6"></div>
       <div class="seedbox">Cards in play
         <input type="number" id="cardFrom" value="1" min="1" style="width:62px">–
         <input type="number" id="cardTo" value="40" min="1" style="width:62px"></div>
@@ -221,7 +221,7 @@ var $ = function(id){ return document.getElementById(id); };
 var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
 
 var state = {
-  seed: "ANNIVERSARY-50",
+  seed: "ANNIVERSARY-50-6",
   round: "r1",
   played: { r1:[], r2:[], r3:[], r4:[] },      // song indices, in the order played
   hooks:  {},                               // "r1:12" -> seconds (overrides)
@@ -643,7 +643,8 @@ function renderRoundStat(){
     html += "<div style='margin-top:6px'>No card in #"+from+"–"+to+" has "+esc(goal.call)+" yet.</div>";
     if (closest) html += "<div style='margin-top:4px'>Closest: card #"+closest.no+", "+closest.missing+
                          " square"+(closest.missing===1?"":"s")+" to go"+
-                         (goal.need>1 ? " on its next line ("+closest.have+" of "+goal.need+" lines done)" : "")+".</div>";
+                         (goal.need>1 ? " on its next "+esc(goal.unit)+" ("+closest.have+" of "+
+                          goal.need+" "+esc(goal.unit)+"s done)" : "")+".</div>";
   } else {
     var first = winners[0].at;
     var tied = winners.filter(function(w){ return w.at === first; });
@@ -687,22 +688,22 @@ function renderVerify(){
        round the second line is the one that decides who was quickest. */
     var clincher = res.done[res.need-1];
     v = '<div class="verdict yes">✓ '+esc(goal.call)+' CONFIRMED — card #'+n+'<small>'+
-        (goal.need > 1
+        (goal.need > 1  /* several patterns: name them all, the last one decided it */
           ? esc(res.done.slice(0, res.need).map(function(d){ return d.name; }).join(" then "))+
             ', the last finishing'
           : esc(clincher.name)+' finished')+
         ' on song #'+(clincher.completedAt+1)+' ("'+
         esc(pool[played[clincher.completedAt]][0])+'"). '+
         marks+' of 25 squares marked.'+
-        (res.have > res.need ? ' '+res.have+' lines complete on this card.' : '')+'</small></div>';
+        (res.have > res.need ? ' '+res.have+' '+esc(goal.unit)+'s complete on this card.' : '')+'</small></div>';
   } else {
     var b = res.best;
     v = '<div class="verdict no">✗ NOT A WINNER — card #'+n+'<small>'+
         (goal.need > 1
-          ? res.have+' of '+goal.need+' lines complete; closest unfinished is '+esc(b.name)+
-            ', '+b.have+' of '+b.of+' marked.'
+          ? res.have+' of '+goal.need+' '+esc(goal.unit)+'s complete; closest unfinished is '+
+            esc(b.name)+', '+b.have+' of '+b.of+' marked.'
           : (goal.patterns.length > 1
-              ? 'Closest line is '+esc(b.name)+': '+b.have+' of '+b.of+' marked'
+              ? 'Closest '+esc(goal.unit)+' is '+esc(b.name)+': '+b.have+' of '+b.of+' marked'
               : b.have+' of '+b.of+' squares marked')+
             ' — '+b.missing+' to go.')+
         ' '+marks+' of 25 squares marked overall.</small></div>';
@@ -739,7 +740,7 @@ $("cardFrom").onchange = function(){ state.cardFrom = Math.max(1, +this.value||1
 $("cardTo").onchange   = function(){ state.cardTo   = Math.max(1, +this.value||40); save(); renderAll(); };
 
 $("seed").onchange = function(){
-  state.seed = this.value.trim() || "ANNIVERSARY-50";
+  state.seed = this.value.trim() || "ANNIVERSARY-50-6";
   load(); renderAll();
 };
 

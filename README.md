@@ -29,19 +29,22 @@ their card.
 
 | Round | Theme | To win | Squares | Typical length |
 |---|---|---|---|---|
-| 1 | Going to the Chapel | **One line** — any row, column or diagonal | 5 | ~11 songs, 8 min |
-| 2 | Songs of 1976 | **Two lines** — any two, and they may cross | ~10 | ~18 songs, 12 min |
-| 3 | Golden Oldies | **Picture frame** — every square around the outside edge | 16 | ~33 songs, 22 min |
-| 4 | Love Songs | **Cover all** — every square on the card | 24 | ~36 songs, 24 min |
+| 1 | Going to the Chapel | **Postage stamp** — any 2×2 block | 4 | ~10 songs, 7 min |
+| 2 | Songs of 1976 | **One line** — any row, column or diagonal | 5 | ~12 songs, 8 min |
+| 3 | Golden Oldies | **Two lines** — any two, and they may cross | ~10 | ~18 songs, 12 min |
+| 4 | Love Songs | **Picture frame** — every square around the outside edge | 16 | ~33 songs, 22 min |
+
+That comes to about **56 minutes all in** — 46 of music, plus ten for intros, verifying
+winners and handing out prizes. See [Keeping it under an hour](#keeping-it-under-an-hour)
+if you want to re-cut it.
 
 The win pattern is printed on every card, as a name and a little 5×5 icon beside the
 round title, so nobody has to remember which round is which. It also shows on the DJ's
 round tab, run sheet, and verification panel.
 
-Rounds 3 and 4 are long by design — a frame needs 16 of a card's 24 songs and a full
-house needs all 24, so most of the pool has to be played before anyone finishes. That
-is the shape of those games, not a bad seed. Budget about an hour of music for the
-four rounds, and consider dropping the snippet to 20 seconds for the last two.
+Round 4 is long by design — a frame needs 16 of a card's 24 songs, so most of the pool
+has to be played before anyone finishes. That's the shape of that game, not a bad seed.
+It's the only long round in the line-up, which is what keeps the night inside the hour.
 
 **Cards are never stored anywhere.** They are *derived* from three things: the master
 seed, the round, and the card number. The generator and the DJ console run the same
@@ -50,8 +53,51 @@ against the songs actually played. That's what makes verification trustworthy �
 it's why the seed must match.
 
 > The seed is printed in small type at the bottom of every card
-> (`ANNIVERSARY-50 · R1 · card 18`). If the console's seed doesn't match that, the
+> (`ANNIVERSARY-50-6 · R1 · card 18`). If the console's seed doesn't match that, the
 > console will happily verify the *wrong* card. Check it once before you start.
+
+---
+
+## Keeping it under an hour
+
+The thing that decides how long a round runs is **not how many squares the pattern
+needs — it's how many ways there are to make it.** Measured over 200 seeds with 40
+guests, a 40-song pool, and the first winner ending the round:
+
+| Win condition | Squares | Ways to make it | Songs | Time at 30s snippets |
+|---|---|---|---|---|
+| `stamp` — any 2×2 block | 4 | 12 | **10** | 7 min |
+| `line` — row, column or diagonal | 5 | 12 | **11** | 7 min |
+| `corners` — the four corners | 4 | 1 | **17** | 11 min |
+| `twoLines` | ~10 | 12 (pick 2) | **18** | 12 min |
+| `threeLines` | ~15 | 12 (pick 3) | **22** | 15 min |
+| `x` — both diagonals | 8 | 1 | **26** | 17 min |
+| `frame` — the outside edge | 16 | 1 | **34** | 23 min |
+| `blackout` — cover all | 24 | 1 | **36** | 24 min |
+
+Four corners needs *four* squares and takes 17 songs; the postage stamp also needs
+four and takes 10, because there are twelve places to make one. Three lines needs 15
+squares and is quicker than the X's 8. A single fixed shape is slow however small it
+is, since every guest needs those exact squares.
+
+The practical consequence: **you can afford one long round, not two.** A frame and a
+cover-all cost the same ~23 minutes each, so a line-up with both runs to 76 minutes
+however you seed it. This one spends its long round on the finale and keeps the other
+three at the cheap end.
+
+Three levers if you need to claw back time:
+
+1. **Shorten the snippet.** It's editable in the console mid-party and takes effect on
+   the next song, so it doubles as a safety valve: dropping the last round to 20
+   seconds saves about 6 minutes on its own.
+2. **Swap a win condition.** One word in `data/songs.js` — see
+   [Changing how a round is won](#changing-how-a-round-is-won).
+3. **Cut the overhead.** Verify the winner while the next round's title slide is
+   already on the projector, and save prize-giving for the end.
+
+One caveat: **fewer guests means longer rounds, not shorter.** Fewer cards in play
+means fewer chances for any of them to complete the pattern. At 20 guests add roughly
+two songs to most rounds — about five minutes across the night.
 
 ---
 
@@ -66,18 +112,19 @@ it before printing a single page.
 - Click **Simulate this seed** — it reports how many songs each round needs before
   someone wins it, how long that is in minutes, and the total for the night.
 - Each round is judged against its own win condition, because they are not comparable:
-  a one-line round should land in **8–16 songs**, two lines in **14–22**, the picture
-  frame in **28–36**, and cover-all in **32–39**. A 33-song frame round is normal; a
+  a stamp round should land in **5–15 songs**, one line in **8–16**, two lines in
+  **14–22** and the picture frame in **28–36**. A 33-song frame round is normal; a
   33-song one-line round would mean something is wrong.
+- Set the **snippet length** there too and the estimate follows it, so the readout
+  tells you what the night will actually cost in minutes — and says so plainly if it
+  runs past an hour.
 - Click **Find a well-paced seed** to search for a seed where every round lands in its
-  ideal range with exactly one winner.
+  ideal range with exactly one winner *and* the whole thing fits the hour.
 
-**Ties get more likely the more of the card a round asks for.** Measured over 300
-seeds with 40 guests: one line ties about 15% of the time, two lines 20%, the picture
-frame 33%, and cover-all 38% — by the end of a cover-all round almost everyone is
-waiting on the same last few songs. The seed search will often fail to find a
-tie-free cover-all round no matter how long it looks; that is expected, and the
-tiebreak below handles it.
+**Ties get more likely the more of the card a round asks for.** Measured over 200
+seeds with 40 guests: the stamp round ties about 14% of the time, one line 18%, two
+lines 22% and the picture frame 25% — late in a long round most of the room is waiting
+on the same few songs. The tiebreak below handles it.
 
 ### 2. Add guest names (optional)
 
@@ -309,16 +356,16 @@ If the number isn't in your printed range, it says so rather than inventing a re
 
 ### If two people call bingo at once
 
-It happens in roughly one round in six for a one-line round, and far more often in the
-later rounds — about a third of frame rounds and cover-all rounds end in a tie, because
-everyone is waiting on the same last songs. Both cards can be genuinely correct. Verify
-each one and compare the **finished on song #N** line:
+It happens in roughly one round in six early on, and more often in the long rounds —
+about a quarter of frame rounds end in a tie, because by then most of the room is
+waiting on the same few songs. Both cards can be genuinely correct. Verify each one
+and compare the **finished on song #N** line:
 
 1. **Lower song number wins** — that card completed the pattern first, even if they
    shouted second.
 2. **Same song number?** Then compare total squares marked (shown under the verdict) —
-   more marks means a fuller card. This one can't separate a cover-all tie, where both
-   winners are on 25 of 25 by definition.
+   more marks means a fuller card. (This one can't separate a `blackout` tie if you
+   switch a round to it, since both winners are on 25 of 25 by definition.)
 3. **Still tied?** Both win. It's an anniversary party; hand out two prizes, or let the
    couple pick. Worth having a spare prize for round 4 for exactly this reason.
 
@@ -338,10 +385,10 @@ All 160 songs live in [`data/songs.js`](data/songs.js) — 40 per round. Each en
 Swap in the couple's own favourites, their wedding song, whatever. Two rules:
 
 - Keep **at least 25 songs** per round (24 squares plus a spare). Around 40 is the
-  sweet spot. For the frame and cover-all rounds a *smaller* pool doesn't save much
-  time — a card still needs 16 or 24 specific squares — and it makes ties much more
-  likely (a 26-song cover-all round ties about 72% of the time versus 38% at 40), so
-  leave those at 40.
+  sweet spot. Shrinking a pool is *not* a good way to shorten a long round: the card
+  still needs its 16 or 24 specific squares, so you save little time and ties get much
+  more likely (a 26-song cover-all round ties about 72% of the time versus 38% at 40).
+  Change the win condition instead.
 - After editing, re-run **Simulate this seed** and **reprint the cards**. Changing the
   song list changes every card.
 
@@ -353,11 +400,17 @@ Each round names its win condition in the same file:
 r3: { label: "Round 3 — Golden Oldies", tag: "oldies", goal: "frame", songs: [ ... ] }
 ```
 
-`goal` takes `"line"`, `"twoLines"`, `"frame"` or `"blackout"`. The patterns, the
-expected pacing for each, and the little 5×5 icon all live in
+`goal` takes any of `"stamp"`, `"line"`, `"corners"`, `"twoLines"`, `"threeLines"`,
+`"x"`, `"frame"` or `"blackout"` — the table in
+[Keeping it under an hour](#keeping-it-under-an-hour) says what each costs in songs
+and minutes, so you can re-cut the night to a different length by swapping words.
+
+The patterns, the expected pacing for each, and the little 5×5 icon all live in
 [`js/bingo.js`](js/bingo.js) — add a new goal there and any round can use it. The
-cards, run sheet, console tabs and verification panel all read the goal, so changing
-this one word updates every one of them.
+cards, run sheet, console tabs, projector and verification panel all read the goal, so
+changing this one word updates every one of them. Re-run **Simulate this seed**
+afterwards: a different win condition changes how long the round runs, and the seed
+that suited the old one may not suit the new.
 
 Cards are laid out with the FREE square in the centre and a `B I N G O` header, and
 each round prints in its own colour so the piles don't get mixed up.

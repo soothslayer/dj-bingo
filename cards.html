@@ -130,7 +130,7 @@
     <div class="row">
       <div>
         <label for="seed">Master seed <span style="font-weight:400;color:var(--muted)">(must match the DJ console)</span></label>
-        <input type="text" id="seed" value="ANNIVERSARY-50">
+        <input type="text" id="seed" value="ANNIVERSARY-50-6">
       </div>
       <div>
         <label for="occasion">Occasion line</label>
@@ -162,8 +162,13 @@
   <fieldset>
     <legend>Seed check</legend>
     <p class="note" style="margin-top:0">Because every card is derived from the seed, the whole game can be simulated
-       before you print. A good seed gives each round roughly 9&ndash;15 songs before the first bingo.</p>
-    <div class="actions">
+       before you print &mdash; including how long it will run. Each round is judged against its own
+       win condition, since a picture frame needs most of the pool played and a line does not.</p>
+    <div class="row" style="max-width:290px">
+      <div><label for="snipEst">Snippet length (seconds)</label>
+      <input type="number" id="snipEst" value="30" min="5" max="90"></div>
+    </div>
+    <div class="actions" style="margin-top:12px">
       <button class="ghost" id="checkSeed">Simulate this seed</button>
       <button class="ghost" id="rollSeed">Find a well-paced seed</button>
     </div>
@@ -200,7 +205,7 @@
   }
   function cfg(){
     return {
-      seed: $("seed").value.trim() || "ANNIVERSARY-50",
+      seed: $("seed").value.trim() || "ANNIVERSARY-50-6",
       occasion: $("occasion").value.trim(),
       from: Math.max(1, parseInt($("from").value,10) || 1),
       to:   Math.max(1, parseInt($("to").value,10) || 40),
@@ -302,8 +307,23 @@
   window.addEventListener("resize", scalePreview);
 
   /* ---- seed simulation ---- */
-  /* Roughly a snippet plus the beat it takes the room to find the square. */
-  var SECONDS_PER_SONG = 40;
+  /* A song costs its snippet plus the beat it takes the room to find the square. */
+  var GAP_SECONDS = 10;
+  var OVERHEAD_MIN = 10;      // intros, verifying winners, handing out prizes
+  var TARGET_MIN = 60;
+  function perSong(){ return Math.max(5, parseInt($("snipEst").value, 10) || 30) + GAP_SECONDS; }
+
+  /* The number people actually care about: does the whole thing fit the slot? */
+  function budgetLine(songs){
+    var per = perSong(), music = songs * per / 60, all = music + OVERHEAD_MIN;
+    var txt = '<b>'+Math.round(music)+' min</b> of music, about <b>'+Math.round(all)+
+              ' min</b> all in (allowing '+OVERHEAD_MIN+' min for intros, verifying and prizes).';
+    if (all <= TARGET_MIN) return txt + ' Inside the '+TARGET_MIN+'-minute target.';
+    var at20 = songs * (20 + GAP_SECONDS) / 60 + OVERHEAD_MIN;
+    return txt + ' <b>Over the '+TARGET_MIN+'-minute target by '+Math.ceil(all - TARGET_MIN)+
+           ' min.</b> A 20-second snippet would bring it to about '+Math.round(at20)+
+           ' min; otherwise give a round an easier win condition.';
+  }
 
   function simulateSeed(seed, from, to, rounds){
     var res = [];
@@ -331,7 +351,7 @@
     var total = 0;
     var html = res.map(function(r){
       total += r.songs;
-      var mins = Math.round(r.songs * SECONDS_PER_SONG / 60);
+      var mins = Math.round(r.songs * perSong() / 60);
       if (!r.ran) return "<div><b>"+SONGS[r.round].label+"</b>: <em>nobody completes the "+
                          esc(r.goal.label.toLowerCase())+" \u2014 the pool runs out first.</em></div>";
       return "<div><b>"+SONGS[r.round].label+"</b> ("+esc(r.goal.label.toLowerCase())+"): first winner after <b>"+
@@ -341,8 +361,8 @@
     $("seedResult").innerHTML = '<div class="'+(bad.length?"warn":"ok")+'"><div style="margin-bottom:6px">'+
       'Seed <b>'+esc(seed)+'</b>'+(bad.length? " &mdash; one or more rounds fall outside the comfortable range for how they are won."
                                              : " &mdash; all rounds well paced.")+'</div>'+html+
-      '<div style="margin-top:6px;opacity:.8">About '+Math.round(total*SECONDS_PER_SONG/60)+
-      ' minutes of music across '+res.length+' round(s), if the DJ follows the suggested play order.</div></div>';
+      '<div style="margin-top:8px">'+budgetLine(total)+'</div>'+
+      '<div style="margin-top:6px;opacity:.8">Assumes the DJ follows the suggested play order.</div></div>';
   }
 
   $("checkSeed").onclick = function(){
@@ -358,14 +378,16 @@
     for (var i=1;i<=400;i++){
       var cand = base + "-" + i;
       var res = simulateSeed(cand, c.from, c.to, rounds);
-      var good = res.every(function(r){
+      var songs = res.reduce(function(a, r){ return a + r.songs; }, 0);
+      var fits = songs * perSong() / 60 + OVERHEAD_MIN <= TARGET_MIN;
+      var good = fits && res.every(function(r){
         return r.ran && r.songs >= r.goal.pace.ideal[0] && r.songs <= r.goal.pace.ideal[1] && r.winners.length === 1;
       });
       if (good){ $("seed").value = cand; renderSim(cand, res); return; }
     }
-    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries landed every round in its ideal range with a '+
-      'single winner. Ties get commoner the more of the card a round asks for, so a cover-all round often has two '+
-      'winners however you seed it &mdash; try a different base seed, or accept a tie and use the tiebreak.</div>';
+    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries fitted the clock with every round in its ideal range and a '+
+      'single winner. Ties get commoner the more of the card a round asks for &mdash; try a different base seed, '+
+      'a shorter snippet, or accept a tie and use the tiebreak.</div>';
   };
 
   $("exportCfg").onclick = function(){

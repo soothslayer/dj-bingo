@@ -137,7 +137,7 @@
        the song and artist. Same play order as the DJ console, so the screen always matches the room.</p>
 
     <label for="seed">Master seed <span style="text-transform:none;letter-spacing:0;font-weight:400">(must match the console)</span></label>
-    <input type="text" id="seed" value="ANNIVERSARY-50">
+    <input type="text" id="seed" value="ANNIVERSARY-50-6">
 
     <label for="occasion">Occasion line</label>
     <input type="text" id="occasion" value="Bob &amp; Carol — 50th Anniversary">
@@ -227,7 +227,7 @@ try{
 }catch(e){}
 
 /* URL parameters, so the projector laptop can be sent straight to the right place:
-   show.html?round=r3&seed=ANNIVERSARY-50&snip=20&follow=1&start=7 */
+   show.html?round=r3&seed=ANNIVERSARY-50-6&snip=20&follow=1&start=7 */
 var q = new URLSearchParams(location.search);
 if (q.get("seed")) $("seed").value = q.get("seed");
 if (q.get("occasion")) $("occasion").value = q.get("occasion");
@@ -493,7 +493,7 @@ function fullscreen(){
 }
 
 function start(){
-  show.seed = $("seed").value.trim() || "ANNIVERSARY-50";
+  show.seed = $("seed").value.trim() || "ANNIVERSARY-50-6";
   show.occasion = $("occasion").value.trim();
   show.snip = Math.max(5, Math.min(120, parseInt($("snip").value, 10) || 30));
   show.follow = $("followChk").checked;
