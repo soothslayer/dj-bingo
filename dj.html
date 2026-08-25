@@ -8,7 +8,7 @@
   :root{
     --bg:#14131a; --panel:#1e1d27; --panel2:#272634; --ink:#f2f0ea; --muted:#9a95a8;
     --rule:#37354a; --accent:#f5b73d; --good:#3fbf6b; --bad:#e0534f; --info:#4aa8e0;
-    --r1:#f5b73d; --r2:#f97316; --r3:#2dd4bf; --r4:#a78bfa; --r5:#fb7185;
+    --r1:#f5b73d; --r2:#f97316; --r3:#2dd4bf; --r4:#a78bfa;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
@@ -213,12 +213,12 @@
 (function(){
 "use strict";
 var $ = function(id){ return document.getElementById(id); };
-var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)", r5:"var(--r5)" };
+var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
 
 var state = {
   seed: "ANNIVERSARY-50",
   round: "r1",
-  played: { r1:[], r2:[], r3:[], r4:[], r5:[] },   // song indices, in the order played
+  played: { r1:[], r2:[], r3:[], r4:[] },      // song indices, in the order played
   hooks:  {},                               // "r1:12" -> seconds (overrides)
   snip: 30,
   cardFrom: 1,                              // the card numbers actually printed —

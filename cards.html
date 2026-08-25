@@ -7,7 +7,7 @@
 <style>
   :root{
     --ink:#1b1a17; --muted:#6b6559; --rule:#d8d0c0; --paper:#fff;
-    --r1:#b7791f; --r2:#c2410c; --r3:#0f766e; --r4:#6d28d9; --r5:#be123c;
+    --r1:#b7791f; --r2:#c2410c; --r3:#0f766e; --r4:#6d28d9;
   }
   *{box-sizing:border-box}
   body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -140,11 +140,11 @@
     <div class="checks" id="roundChecks"></div>
     <label style="margin-top:14px">Layout</label>
     <div class="checks">
-      <label><input type="radio" name="per" value="2" checked> 2 cards per page <span style="color:var(--muted)">(recommended — 5 rounds = 3 sheets per guest, duplex)</span></label>
+      <label><input type="radio" name="per" value="2" checked> 2 cards per page <span style="color:var(--muted)">(recommended — 4 rounds = 2 sheets per guest, duplex)</span></label>
       <label><input type="radio" name="per" value="1"> 1 per page (large print)</label>
     </div>
     <div class="checks" style="margin-top:8px">
-      <label><input type="checkbox" id="groupByGuest" checked> Group by guest <span style="color:var(--muted)">(all 5 rounds together — best for duplex)</span></label>
+      <label><input type="checkbox" id="groupByGuest" checked> Group by guest <span style="color:var(--muted)">(all 4 rounds together — best for duplex)</span></label>
     </div>
   </fieldset>
 
@@ -180,7 +180,7 @@
 <script src="js/bingo.js"></script>
 <script>
 (function(){
-  var ACCENT = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)", r5:"var(--r5)" };
+  var ACCENT = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
   var $ = function(id){ return document.getElementById(id); };
 
   /* round checkboxes */
