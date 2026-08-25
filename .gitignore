@@ -3,3 +3,6 @@ audio/*
 !audio/.gitkeep
 _testaudio/
 .DS_Store
+
+# staged upload directory (built by deploy.sh)
+.deploy/

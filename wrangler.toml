@@ -1,0 +1,5 @@
+# Cloudflare Pages — static site, no build step.
+# Deploy with ./deploy.sh, which stages the site files and uploads only those.
+name = "dj-bingo"
+compatibility_date = "2026-08-24"
+pages_build_output_dir = ".deploy"

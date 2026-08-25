@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJ Bingo</title>
+<style>
+  :root{
+    --bg:#14131a; --panel:#1e1d27; --ink:#f2f0ea; --muted:#9a95a8; --rule:#37354a;
+    --accent:#f5b73d; --r1:#f5b73d; --r2:#f97316; --r3:#2dd4bf; --r4:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 22px 70px}
+  h1{font-size:30px;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 34px}
+  a.card{display:block;text-decoration:none;color:inherit;background:var(--panel);
+         border:1px solid var(--rule);border-left:5px solid var(--accent);border-radius:12px;
+         padding:18px 20px;margin-bottom:14px}
+  a.card:hover{border-color:var(--accent);border-left-color:var(--accent)}
+  a.card h2{margin:0 0 4px;font-size:19px}
+  a.card p{margin:0;color:var(--muted);font-size:14.5px}
+  a.card .who{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.1em;
+         text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+  h3{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+     margin:34px 0 12px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  td,th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  td.n{color:var(--muted);width:34px;font-variant-numeric:tabular-nums}
+  ol{margin:0;padding-left:20px;font-size:14.5px;color:var(--muted)}
+  ol li{margin-bottom:7px}
+  ol li:last-child{margin-bottom:0}
+  ol strong{color:var(--ink)}
+  .note{color:var(--muted);font-size:13.5px;margin-top:26px}
+  code{background:#272634;border-radius:4px;padding:1px 6px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DJ Bingo</h1>
+  <p class="sub">Music bingo in <span id="roundcount">four</span> rounds, each won a different way.
+     Everything is built from one master seed, so the cards, the run sheet and the winner
+     check can never disagree.</p>
+
+  <a class="card" href="cards.html" style="--accent:var(--r1)">
+    <span class="who">Before the party</span>
+    <h2>Print the cards →</h2>
+    <p>Numbered cards for every guest, the DJ run sheet, and a seed check that tells you how
+       long the night will run.</p>
+  </a>
+
+  <a class="card" href="dj.html" style="--accent:var(--r3)">
+    <span class="who">On the night</span>
+    <h2>DJ console →</h2>
+    <p>Plays the snippets, tracks what has been played, and proves who won.</p>
+  </a>
+
+  <a class="card" href="show.html" style="--accent:var(--r4)">
+    <span class="who">On the projector</span>
+    <h2>Big screen →</h2>
+    <p>A countdown per song, then the reveal. Can follow the console by itself.</p>
+  </a>
+
+  <h3 id="roundhead">The rounds</h3>
+  <table>
+    <tr><th></th><th>Theme</th><th>Won by</th><th>Songs</th></tr>
+    <tbody id="rounds"></tbody>
+  </table>
+
+  <h3>If you are testing this</h3>
+  <ol>
+    <li>Start in <strong>Print the cards</strong>. Leave the seed alone, set guests to 4, and
+        hit generate.</li>
+    <li>Print to PDF rather than paper — you just want to see that the cards look right.</li>
+    <li>Open the <strong>DJ console</strong> in a second tab and play a few songs. Snippets
+        stream from Apple&rsquo;s 30-second previews, so the first one may take a moment.</li>
+    <li>Round 1 is a postage stamp, so somebody has it within about ten songs. Use
+        <strong>Verify winner</strong> with a card number to check the claim.</li>
+  </ol>
+
+  <p class="note">The console and the big screen must both be open from this same address for the
+     screen to follow the console automatically. Check the seed matches what is printed on the
+     cards — <code>ANNIVERSARY-50-6</code> unless you changed it. Music is never hosted here:
+     snippets are Apple&rsquo;s public 30&#8209;second previews, or your own files, which stay on
+     your machine.
+     <a href="https://github.com/soothslayer/dj-bingo#readme" style="color:var(--r3)">Full instructions</a>.</p>
+</div>
+
+<script src="data/songs.js"></script>
+<script src="js/bingo.js"></script>
+<script>
+  /* The round table is built from songs.js and bingo.js rather than typed out here,
+     so this page cannot drift out of date the way a hardcoded copy would. */
+  (function () {
+    var WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+    var body = document.getElementById('rounds');
+    var total = 0;
+
+    ROUND_KEYS.forEach(function (key, i) {
+      var round = SONGS[key];
+      var goal = goalFor(key);
+      total += round.songs.length;
+
+      /* Labels read "Round 1 — Going to the Chapel"; the number is already its own column. */
+      var theme = round.label.replace(/^Round\s*\d+\s*[—-]\s*/, '');
+
+      var tr = document.createElement('tr');
+      [String(i + 1), theme, goal.label, String(round.songs.length)].forEach(function (text, col) {
+        var td = document.createElement(col === 0 ? 'td' : 'td');
+        if (col === 0) td.className = 'n';
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+      if (goal.rule) tr.title = goal.rule;
+      body.appendChild(tr);
+    });
+
+    var n = ROUND_KEYS.length;
+    document.getElementById('roundcount').textContent = WORDS[n] || n;
+    document.getElementById('roundhead').textContent =
+      'The ' + (WORDS[n] || n) + ' rounds — ' + total + ' songs';
+  })();
+</script>
+</body>
+</html>
