@@ -35,14 +35,18 @@ their card.
 
 | Round | Theme | To win | Squares | Typical length |
 |---|---|---|---|---|
-| 1 | Going to the Chapel | **Postage stamp** — any 2×2 block | 4 | ~10 songs, 7 min |
-| 2 | Songs of 1976 | **One line** — any row, column or diagonal | 5 | ~12 songs, 8 min |
-| 3 | Golden Oldies | **Two lines** — any two, and they may cross | ~10 | ~18 songs, 12 min |
-| 4 | Love Songs | **Picture frame** — every square around the outside edge | 16 | ~33 songs, 22 min |
+| 1 | Going to the Chapel | **One line** — any row, column or diagonal | 5 | ~9 songs, 6 min |
+| 2 | Songs of 1976 | **One line** — any row, column or diagonal | 5 | ~11 songs, 7 min |
+| 3 | Golden Oldies | **Two lines** — any two, and they may cross | ~10 | ~16 songs, 11 min |
+| 4 | Love Songs | **Cover all** — every square on the card | 24 | ~36 songs, 24 min |
 
-That comes to about **56 minutes all in** — 46 of music, plus ten for intros, verifying
-winners and handing out prizes. See [Keeping it under an hour](#keeping-it-under-an-hour)
-if you want to re-cut it.
+That comes to about **58 minutes all in** — 48 of music, plus ten for intros, verifying
+winners and handing out prizes. Two easy rounds to warm the room up, then a step up,
+then a long finale everyone is playing until the end.
+
+That line-up is the *default*, not a fact about the program — see
+[Changing how a round is won](#changing-how-a-round-is-won) to re-cut it, and
+[Keeping it under an hour](#keeping-it-under-an-hour) for what each option costs.
 
 The win pattern is printed on every card, as a name and a little 5×5 icon beside the
 round title, so nobody has to remember which round is which. It also shows on the DJ's
@@ -96,7 +100,8 @@ Three levers if you need to claw back time:
 1. **Shorten the snippet.** It's editable in the console mid-party and takes effect on
    the next song, so it doubles as a safety valve: dropping the last round to 20
    seconds saves about 6 minutes on its own.
-2. **Swap a win condition.** One word in `data/songs.js` — see
+2. **Swap a win condition.** One word in the `ROUND_GOALS` block at the top of
+   `data/songs.js`, or a URL parameter if you just want to try it — see
    [Changing how a round is won](#changing-how-a-round-is-won).
 3. **Cut the overhead.** Verify the winner while the next round's title slide is
    already on the projector, and save prize-giving for the end.
@@ -245,7 +250,7 @@ pattern icon, big, so the room can see what they're playing for), then per song 
 played — handy while people check their cards.
 
 Every slide carries the round number, the theme and the win condition: as a corner
-header (`ROUND 3 · Golden Oldies · ▣ Picture frame`) and again above the song itself,
+header (`ROUND 3 · Golden Oldies · ▣ Two lines`) and again above the song itself,
 so anyone glancing up mid-round knows where they are — and so it survives a projector
 that crops the edges of the picture.
 
@@ -400,23 +405,68 @@ Swap in the couple's own favourites, their wedding song, whatever. Two rules:
 
 ### Changing how a round is won
 
-Each round names its win condition in the same file:
+All four live together at the top of [`data/songs.js`](data/songs.js), above the song
+lists rather than buried inside them:
 
 ```js
-r3: { label: "Round 3 — Golden Oldies", tag: "oldies", goal: "frame", songs: [ ... ] }
+var ROUND_GOALS = {
+  r1: "line",
+  r2: "line",
+  r3: "twoLines",
+  r4: "blackout"
+};
 ```
 
-`goal` takes any of `"stamp"`, `"line"`, `"corners"`, `"twoLines"`, `"threeLines"`,
-`"x"`, `"frame"` or `"blackout"` — the table in
-[Keeping it under an hour](#keeping-it-under-an-hour) says what each costs in songs
-and minutes, so you can re-cut the night to a different length by swapping words.
+Any of `"stamp"`, `"line"`, `"corners"`, `"twoLines"`, `"threeLines"`, `"x"`,
+`"frame"` or `"blackout"` works. The table in
+[Keeping it under an hour](#keeping-it-under-an-hour) says what each costs in songs and
+minutes, so you can re-cut the night to a different length by swapping words.
+
+#### Trying one without editing anything
+
+All three pages take a `goals` parameter, which beats `ROUND_GOALS` for that visit:
+
+```
+?goals=line,line,twoLines,blackout   all four, in order
+?goals=r4:frame                      just round 4, others unchanged
+?goals=,,x                           just round 3 — an empty slot skips a round
+```
+
+Handy for pacing experiments: open
+`cards.html?view=run&goals=stamp,line,twoLines,frame`, read the projected running time,
+and try another line-up without touching a file. When you settle on one, write it into
+`ROUND_GOALS` so it is what everybody gets.
+
+A goal that does not exist is ignored rather than fatal — a typo costs you that one
+round, not the evening. `node test/check.js` fails the build on a typo in `ROUND_GOALS`
+itself, where it would otherwise go unnoticed.
+
+#### Keeping the three pages agreed
+
+This is the part worth understanding, because getting it wrong is quiet and expensive:
+**a console checking a different pattern from the one printed on the card will tell a
+real winner they have not won.**
+
+So the goals travel with the game rather than being set three times:
+
+- The console **remembers** them per seed, so a reload mid-party cannot lose them.
+- **Export config** from the card generator writes them into the JSON, and **Load
+  config…** in the console applies them — hand that file over and the console is
+  judging exactly what you printed.
+- The projector **adopts** whatever the console is using while it is following along.
+- An explicit `?goals=` in the address bar beats all of the above, so you can always
+  override by hand.
+
+The win pattern is printed on every card and shown on the console's round tab, so a
+mismatch is visible before it costs anyone a prize — check them against each other if a
+verification ever looks wrong.
 
 The patterns, the expected pacing for each, and the little 5×5 icon all live in
-[`js/bingo.js`](js/bingo.js) — add a new goal there and any round can use it. The
-cards, run sheet, console tabs, projector and verification panel all read the goal, so
-changing this one word updates every one of them. Re-run **Simulate this seed**
-afterwards: a different win condition changes how long the round runs, and the seed
-that suited the old one may not suit the new.
+[`js/bingo.js`](js/bingo.js) — add a new goal there and any round can use it. Every
+page resolves goals through the one `goalFor()` function, so nothing can be updated and
+leave another page behind. Re-run **Simulate this seed** afterwards: a different win
+condition changes how long the round runs, and the seed that suited the old one may not
+suit the new.
 
 Cards are laid out with the FREE square in the centre and a `B I N G O` header, and
 each round prints in its own colour so the piles don't get mixed up.
@@ -435,8 +485,10 @@ cards.html?view=run                 # straight to the DJ run sheet
 cards.html?per=1                    # large print
 ```
 
-`seed`, `occasion`, and `group` work the same way. Anything you leave out keeps the
-value shown in the form.
+`seed`, `occasion`, `group` and `goals` work the same way. Anything you leave out keeps
+the value shown in the form. `goals` is covered under
+[Changing how a round is won](#changing-how-a-round-is-won), and works on all three
+pages rather than just this one.
 
 ## Publishing it to a URL
 

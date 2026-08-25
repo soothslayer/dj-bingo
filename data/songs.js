@@ -1,20 +1,43 @@
 /* DJ Bingo — song pools.
  * Format: [ "Title", "Artist", year, hookStartSeconds ]
  *
- * Each round also names how it is won: "stamp", "line", "corners", "twoLines",
- * "threeLines", "x", "frame" (the outside edge) or "blackout" (every square).
- * The patterns, and how long each takes to play, live in js/bingo.js.
- *
  * hookStartSeconds = where the 30s snippet begins. These are ESTIMATES aimed at
  * the most recognisable moment (usually the chorus or the signature riff).
  * Spot-check them in the DJ console and click "Save hooks" to correct any that
  * land badly — the value is stored in your browser and exported with the config.
  */
+/* How each round is won.
+ *
+ * This is the knob that gets turned most often, so all four sit here together
+ * rather than buried beside their song lists — you can see the shape of the
+ * whole night in one glance, and change it without scrolling past 160 songs.
+ *
+ * Any goal defined in js/bingo.js works:
+ *
+ *   line        one row, column or diagonal      ~10-14 songs
+ *   twoLines    any two, and they may cross      ~16-20
+ *   threeLines  any three                        ~20-24
+ *   stamp       any 2x2 block                    ~7-12
+ *   corners     the four corner squares          ~14-20
+ *   x           both diagonals                   ~23-29
+ *   frame       the 16 squares round the edge    ~30-34
+ *   blackout    every square on the card         ~34-38
+ *
+ * The patterns, and those pacing figures, live in js/bingo.js. To try a
+ * different shape without editing this file, put ?goals= on any of the three
+ * pages — see "Changing how a round is won" in the README.
+ */
+var ROUND_GOALS = {
+  r1: "line",
+  r2: "line",
+  r3: "twoLines",
+  r4: "blackout"
+};
+
 var SONGS = {
   r1: {
     label: "Round 1 — Going to the Chapel",
     tag: "wedding",
-    goal: "stamp",
     songs: [
       ["Chapel of Love",                      "The Dixie Cups",              1964,   0],
       ["White Wedding",                       "Billy Idol",                  1982,  62],
@@ -61,7 +84,6 @@ var SONGS = {
   r2: {
     label: "Round 2 — Songs of 1976",
     tag: "1976",
-    goal: "line",
     songs: [
       ["Dancing Queen",                          "ABBA",                          1976,  12],
       ["Fernando",                               "ABBA",                          1976,  46],
@@ -108,7 +130,6 @@ var SONGS = {
   r3: {
     label: "Round 3 — Golden Oldies",
     tag: "oldies",
-    goal: "twoLines",
     songs: [
       ["Johnny B. Goode",                  "Chuck Berry",                   1958,   0],
       ["Rock Around the Clock",            "Bill Haley & His Comets",       1954,   0],
@@ -155,7 +176,6 @@ var SONGS = {
   r4: {
     label: "Round 4 — Love Songs",
     tag: "love",
-    goal: "frame",
     songs: [
       ["I Will Always Love You",            "Whitney Houston",             1992, 150],
       ["Endless Love",                      "Diana Ross & Lionel Richie",  1981,   0],
@@ -203,4 +223,4 @@ var SONGS = {
 
 var ROUND_KEYS = ["r1", "r2", "r3", "r4"];
 
-if (typeof module !== "undefined" && module.exports) { module.exports = { SONGS: SONGS, ROUND_KEYS: ROUND_KEYS }; }
+if (typeof module !== "undefined" && module.exports) { module.exports = { SONGS: SONGS, ROUND_KEYS: ROUND_KEYS, ROUND_GOALS: ROUND_GOALS }; }

@@ -190,12 +190,86 @@ var GOALS = {
 };
 var DEFAULT_GOAL = "line";
 
-/* A round names its goal in data/songs.js; anything unrecognised falls back to
- * a single line, which is the least surprising way to be wrong. */
-function goalFor(roundKey) {
-  var g = (typeof SONGS !== "undefined" && SONGS[roundKey] && SONGS[roundKey].goal) || DEFAULT_GOAL;
-  return GOALS[g] || GOALS[DEFAULT_GOAL];
+/* ---------- which goal a round is using ----------
+ *
+ * Three places are consulted, in order:
+ *
+ *   1. an override — the ?goals= URL parameter, or a config file loaded into
+ *      the console;
+ *   2. ROUND_GOALS in data/songs.js, which is the default night;
+ *   3. a single line, the least surprising way to be wrong.
+ *
+ * Everything that prints, displays or judges a card goes through goalFor(), so
+ * an override set once at load reaches the cards, the run sheet, the projector
+ * and the winner check together. That matters more than it sounds: a console
+ * checking a different pattern from the one printed on the card will happily
+ * tell a real winner they have not won. */
+var goalOverrides = {};
+var goalsCameFromURL = false;
+
+function goalKeyFor(roundKey) {
+  return goalOverrides[roundKey]
+      || (typeof ROUND_GOALS !== "undefined" && ROUND_GOALS[roundKey])
+      || DEFAULT_GOAL;
 }
+
+function goalFor(roundKey) {
+  return GOALS[goalKeyFor(roundKey)] || GOALS[DEFAULT_GOAL];
+}
+
+/* Every round's goal as plain keys — what gets written into an exported config
+ * so the console can be handed the same night the cards were printed for. */
+function roundGoalMap() {
+  var out = {};
+  (typeof ROUND_KEYS !== "undefined" ? ROUND_KEYS : []).forEach(function (rk) {
+    out[rk] = goalKeyFor(rk);
+  });
+  return out;
+}
+
+/* Applies overrides, ignoring anything that isn't a real goal rather than
+ * failing: a typo in a URL should cost you that one round, not the evening.
+ * Returns what it actually applied. */
+function setRoundGoals(map) {
+  var applied = {};
+  Object.keys(map || {}).forEach(function (rk) {
+    var g = map[rk];
+    if (GOALS[g]) { goalOverrides[rk] = g; applied[rk] = g; }
+  });
+  return applied;
+}
+
+function clearRoundGoals() { goalOverrides = {}; goalsCameFromURL = false; }
+
+/* Accepts either shape, and a mix of the two:
+ *
+ *   ?goals=line,line,twoLines,blackout   positional, in ROUND_KEYS order
+ *   ?goals=r4:frame                      keyed — leaves the other rounds alone
+ *   ?goals=,,x                           an empty slot skips that round
+ */
+function parseGoals(text) {
+  var out = {}, keys = (typeof ROUND_KEYS !== "undefined" ? ROUND_KEYS : []);
+  String(text || "").split(",").forEach(function (raw, i) {
+    var part = raw.trim();
+    if (!part) return;
+    var keyed = part.match(/^(\w+)\s*[:=]\s*(\w+)$/);
+    if (keyed) out[keyed[1]] = keyed[2];
+    else if (keys[i]) out[keys[i]] = part;
+  });
+  return out;
+}
+
+/* Runs on load in the browser, before any page has drawn anything, so no page
+ * has to remember to ask. In node there is no location and this does nothing. */
+function applyGoalsFromURL() {
+  if (typeof location === "undefined" || !location.search) return {};
+  var raw = new URLSearchParams(location.search).get("goals");
+  if (!raw) return {};
+  var applied = setRoundGoals(parseGoals(raw));
+  goalsCameFromURL = Object.keys(applied).length > 0;
+  return applied;
+}
+applyGoalsFromURL();
 
 /* playOrder: array of song indices in the order they were played this round.
  *
@@ -295,6 +369,8 @@ if (typeof module !== "undefined" && module.exports) {
     winningLines: winningLines, marksOnCard: marksOnCard, LINES: LINES, FREE: FREE,
     suggestedPlayOrder: suggestedPlayOrder, findDuplicateCards: findDuplicateCards,
     GOALS: GOALS, DEFAULT_GOAL: DEFAULT_GOAL, goalFor: goalFor, checkCard: checkCard,
+    goalKeyFor: goalKeyFor, roundGoalMap: roundGoalMap, setRoundGoals: setRoundGoals,
+    clearRoundGoals: clearRoundGoals, parseGoals: parseGoals,
     goalDiagram: goalDiagram, FRAME_CELLS: FRAME_CELLS, ALL_CELLS: ALL_CELLS,
     CORNER_CELLS: CORNER_CELLS, X_CELLS: X_CELLS, STAMP_BLOCKS: STAMP_BLOCKS };
 }
