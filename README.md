@@ -15,7 +15,9 @@ Three files, no install, no internet needed:
 
 Open any of them by double-clicking, or serve the folder and visit
 `http://localhost:8777` (see [Running from a server](#running-from-a-server)). The
-projector page needs the server if you want it to follow the console automatically.
+projector page needs the server if you want it to follow the console automatically —
+or [publish the whole thing](#publishing-it-to-a-url), which solves that and lets you
+reach the pages from any device.
 
 ---
 
@@ -432,6 +434,58 @@ cards.html?per=1                    # large print
 `seed`, `occasion`, and `group` work the same way. Anything you leave out keeps the
 value shown in the form.
 
+## Publishing it to a URL
+
+There is nothing to compile — the three pages *are* the program — so deploying means
+serving them from an address. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+publishes the repository to GitHub Pages on every push to the default branch, and on
+demand from the **Actions** tab (the **Run workflow** button, which the GitHub mobile
+app has too).
+
+Worth doing for three reasons:
+
+- The party laptop, the projector laptop and your phone all reach the same pages, with
+  no copying files onto a stick.
+- **The projector can follow the console.** That needs both pages on one real origin,
+  and it does not work over `file://`.
+- You can edit the song list in GitHub's web editor from a phone and have it live a
+  minute later.
+
+**One-time setup:** *Settings → Pages → Build and deployment → Source: **GitHub
+Actions***. Until that's set the workflow runs but fails at the last step, saying Pages
+isn't enabled. After that the site is at `https://<you>.github.io/dj-bingo/`.
+
+### It checks before it publishes
+
+The deploy runs [`test/check.js`](test/check.js) first, and won't publish if it fails.
+That matters most in exactly the situation this is for: you changed a song from your
+phone and can't try it locally. It fails the build on
+
+- a malformed song entry, a missing title or artist, a nonsense year or hook time;
+- the same song appearing in two rounds — a guest would mark one square and wonder why
+  the other didn't count;
+- a round naming a `goal` that doesn't exist;
+- a win condition that no longer holds (a stamp winnable on three songs, a frame
+  satisfied by something that isn't the edge, and so on);
+- two guests being dealt the same 24 songs on the shipped seed.
+
+It also **reports the night's running time** — songs and minutes per round, and the
+total against the hour — onto the run's summary page, readable from a phone. That part
+never fails the build: editing the songs is allowed to shift the timing, but you should
+be told it moved. Run it yourself any time with `node test/check.js`.
+
+### One thing to know before you enable it
+
+This repository is public, so the published site is too. Anyone with the URL can open
+`dj.html` and see the full song list *and the suggested play order* — which is the
+answer key. For a family party that's a non-issue, since guests would have to go
+looking for it. If it bothers you, don't share the URL beyond the DJ, or make the
+repository private (private Pages needs a paid GitHub plan).
+
+Your local music files are never uploaded — `audio/` is git-ignored, and the hosted
+console falls back to iTunes previews or takes files you drop into it on the night,
+exactly as it does locally.
+
 ## Running from a server
 
 Double-clicking the files works. If your browser gets fussy about local files, serve
@@ -470,11 +524,13 @@ right file.
 ## Files
 
 ```
+index.html       landing page: links to the three, and the round list
 cards.html       card generator, DJ run sheet, print layout
 dj.html          DJ console: player, tracking, verification
 show.html        the projector slideshow: countdown, reveal, round recap
 data/songs.js    the 160 songs and each round's win condition, 40 per round
 js/bingo.js      seeded card generation + win checking (shared by all three pages)
+test/check.js    pre-deploy checks + the running-time report
 audio/           drop your music here (git-ignored)
 ```
 

@@ -1,0 +1,66 @@
+# Publishes the three pages to GitHub Pages.
+#
+# There is nothing to compile — cards.html, dj.html and show.html are the whole
+# program — so "deploy" here means "serve them from a URL". That is worth doing
+# for three reasons:
+#
+#   * the party laptop, the projector laptop and your phone all reach the same
+#     pages without copying files around;
+#   * show.html can follow dj.html, which needs both pages on one real origin
+#     and does not work over file://;
+#   * you can change the song list from the GitHub web editor on a phone and
+#     have it live a minute later.
+#
+# Runs on every push to the default branch, and on demand from the Actions tab
+# (including the GitHub mobile app) via "Run workflow".
+#
+# ONE-TIME SETUP: Settings -> Pages -> Build and deployment -> Source:
+# "GitHub Actions". Until that is set, this workflow will fail at the deploy
+# step with a message saying Pages is not enabled.
+
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [feat/dj-bingo]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; the newest push is the one that should win.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check the songs and the win conditions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Fails the deploy on broken song data or a win condition that does not
+      # hold; reports the night's expected running time either way, onto the
+      # run summary so it can be read from a phone.
+      - run: node test/check.js
+
+  deploy:
+    name: Publish
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - id: deployment
+        uses: actions/deploy-pages@v4
