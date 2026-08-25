@@ -46,10 +46,10 @@ jobs:
     name: Check the songs and the win conditions
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: 'lts/*'
       # Fails the deploy on broken song data or a win condition that does not
       # hold; reports the night's expected running time either way, onto the
       # run summary so it can be read from a phone.
@@ -69,7 +69,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
