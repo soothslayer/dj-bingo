@@ -44,6 +44,10 @@
         border-bottom:2px solid var(--accent);padding-bottom:5px;margin-bottom:6px}
   .occasion{font-size:8.5pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
   .round{font-size:15pt;font-weight:800;color:var(--accent);line-height:1.1}
+  .goal{display:flex;align-items:center;gap:5px;color:var(--accent);margin-top:2px}
+  .goal .gl{font-size:8.5pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .gd .on{fill:currentColor}
+  .gd .off{fill:none;stroke:currentColor;stroke-width:.55;opacity:.45}
   .who{text-align:right}
   .who .num{font-size:19pt;font-weight:800;line-height:1}
   .who .name{font-size:9.5pt;color:var(--muted);max-width:2.4in;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -75,6 +79,7 @@
   .sheet.one .who .num{font-size:30pt}
   .sheet.one .who .name{font-size:13pt;max-width:3.4in}
   .sheet.one .occasion{font-size:11pt}
+  .sheet.one .goal .gl{font-size:12pt}
   .sheet.one .bingo-hdr div{font-size:20pt}
   .sheet.one .cell.free .t{font-size:16pt}
   .sheet.one .card-foot{font-size:8pt}
@@ -217,6 +222,7 @@
   function cardEl(roundKey, cardNo, c){
     var grid = buildCard(roundKey, cardNo, c.seed);
     var pool = SONGS[roundKey].songs;
+    var goal = goalFor(roundKey);
     var card = document.createElement("div");
     card.className = "card";
     card.style.setProperty("--accent", ACCENT[roundKey]);
@@ -237,13 +243,14 @@
     card.innerHTML =
       '<div class="card-head">'+
         '<div><div class="occasion">'+esc(c.occasion)+'</div>'+
-        '<div class="round">'+esc(SONGS[roundKey].label)+'</div></div>'+
+        '<div class="round">'+esc(SONGS[roundKey].label)+'</div>'+
+        '<div class="goal">'+goalDiagram(goal, 15)+'<span class="gl">'+esc(goal.label)+'</span></div></div>'+
         '<div class="who"><div class="num">#'+cardNo+'</div>'+
         '<div class="name">'+esc(nameFor(c.names, cardNo))+'</div></div>'+
       '</div>'+
       '<div class="bingo-hdr"><div>B</div><div>I</div><div>N</div><div>G</div><div>O</div></div>'+
       '<div class="grid">'+cells+'</div>'+
-      '<div class="card-foot"><span>Mark a square when you hear the song. Five in a row wins.</span>'+
+      '<div class="card-foot"><span>Mark a square when you hear the song. '+esc(goal.rule)+'</span>'+
       '<span>'+esc(c.seed)+' &middot; '+roundKey.toUpperCase()+' &middot; card '+cardNo+'</span></div>';
     return card;
   }
@@ -295,33 +302,47 @@
   window.addEventListener("resize", scalePreview);
 
   /* ---- seed simulation ---- */
+  /* Roughly a snippet plus the beat it takes the room to find the square. */
+  var SECONDS_PER_SONG = 40;
+
   function simulateSeed(seed, from, to, rounds){
     var res = [];
     rounds.forEach(function(rk){
+      var goal = goalFor(rk);
       var cards = [];
       for (var n=from;n<=to;n++) cards.push({no:n, grid:buildCard(rk,n,seed)});
       var order = suggestedPlayOrder(rk, seed), k, winners = [];
       for (k=1;k<=order.length;k++){
         var play = order.slice(0,k);
-        winners = cards.filter(function(c){ return winningLines(c.grid, play).length; });
+        winners = cards.filter(function(c){ return checkCard(c.grid, play, goal).won; });
         if (winners.length) break;
       }
-      res.push({round:rk, songs:k, winners:winners.map(function(w){return w.no;})});
+      res.push({round:rk, goal:goal, songs:k, ran:k<=order.length,
+                winners:winners.map(function(w){return w.no;})});
     });
     return res;
   }
 
+  /* Each goal has its own comfortable range — a frame or a full house needs most
+     of the pool played, so 30-odd songs is normal there and would be alarming in
+     a one-line round. */
   function renderSim(seed, res){
-    var bad = res.filter(function(r){ return r.songs < 8 || r.songs > 16; });
+    var bad = res.filter(function(r){ return !r.ran || r.songs < r.goal.pace.ok[0] || r.songs > r.goal.pace.ok[1]; });
+    var total = 0;
     var html = res.map(function(r){
-      return "<div><b>"+SONGS[r.round].label+"</b>: first bingo after <b>"+r.songs+
-             "</b> songs &mdash; card"+(r.winners.length>1?"s":"")+" #"+r.winners.join(", #")+
+      total += r.songs;
+      var mins = Math.round(r.songs * SECONDS_PER_SONG / 60);
+      if (!r.ran) return "<div><b>"+SONGS[r.round].label+"</b>: <em>nobody completes the "+
+                         esc(r.goal.label.toLowerCase())+" \u2014 the pool runs out first.</em></div>";
+      return "<div><b>"+SONGS[r.round].label+"</b> ("+esc(r.goal.label.toLowerCase())+"): first winner after <b>"+
+             r.songs+"</b> songs, ~"+mins+" min &mdash; card"+(r.winners.length>1?"s":"")+" #"+r.winners.join(", #")+
              (r.winners.length>1?" <em>(tie &mdash; see tiebreak in README)</em>":"")+"</div>";
     }).join("");
     $("seedResult").innerHTML = '<div class="'+(bad.length?"warn":"ok")+'"><div style="margin-bottom:6px">'+
-      'Seed <b>'+esc(seed)+'</b>'+(bad.length? " &mdash; one or more rounds are outside the comfortable 8&ndash;16 song range."
+      'Seed <b>'+esc(seed)+'</b>'+(bad.length? " &mdash; one or more rounds fall outside the comfortable range for how they are won."
                                              : " &mdash; all rounds well paced.")+'</div>'+html+
-      '<div style="margin-top:6px;opacity:.8">Assumes the DJ follows the suggested play order in the console.</div></div>';
+      '<div style="margin-top:6px;opacity:.8">About '+Math.round(total*SECONDS_PER_SONG/60)+
+      ' minutes of music across '+res.length+' round(s), if the DJ follows the suggested play order.</div></div>';
   }
 
   $("checkSeed").onclick = function(){
@@ -337,10 +358,14 @@
     for (var i=1;i<=400;i++){
       var cand = base + "-" + i;
       var res = simulateSeed(cand, c.from, c.to, rounds);
-      var good = res.every(function(r){ return r.songs>=10 && r.songs<=14 && r.winners.length===1; });
+      var good = res.every(function(r){
+        return r.ran && r.songs >= r.goal.pace.ideal[0] && r.songs <= r.goal.pace.ideal[1] && r.winners.length === 1;
+      });
       if (good){ $("seed").value = cand; renderSim(cand, res); return; }
     }
-    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries hit 10&ndash;14 songs with a single winner in every round. Try a different base seed.</div>';
+    $("seedResult").innerHTML = '<div class="warn">No seed in 400 tries landed every round in its ideal range with a '+
+      'single winner. Ties get commoner the more of the card a round asks for, so a cover-all round often has two '+
+      'winners however you seed it &mdash; try a different base seed, or accept a tie and use the tiebreak.</div>';
   };
 
   $("exportCfg").onclick = function(){
@@ -403,11 +428,15 @@
       };
       var cols = '<div class="rs-cols">'+table(0, half)+table(half, order.length)+'</div>';
 
+      var goal = goalFor(rk);
       var d = document.createElement("div");
       d.className = "runsheet";
       d.style.setProperty("--accent2", ACCENT[rk]);
       d.innerHTML =
         '<h3>'+esc(SONGS[rk].label)+' &mdash; DJ run sheet</h3>'+
+        '<div class="rs-sub" style="color:var(--accent2);font-weight:700">'+
+        esc(goal.label.toUpperCase())+' &mdash; '+esc(goal.rule)+
+        ' Expect around '+goal.pace.ideal[0]+'&ndash;'+goal.pace.ideal[1]+' songs.</div>'+
         '<div class="rs-sub">'+esc(c.occasion)+' &middot; seed '+esc(c.seed)+
         ' &middot; cards '+c.from+'&ndash;'+c.to+
         ' &middot; tick each song as you play it, and keep the order &mdash; '+

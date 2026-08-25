@@ -1,6 +1,9 @@
 /* DJ Bingo — song pools.
  * Format: [ "Title", "Artist", year, hookStartSeconds ]
  *
+ * Each round also names how it is won — "line", "twoLines", "frame" (the outside
+ * edge) or "blackout" (every square). The patterns themselves live in js/bingo.js.
+ *
  * hookStartSeconds = where the 30s snippet begins. These are ESTIMATES aimed at
  * the most recognisable moment (usually the chorus or the signature riff).
  * Spot-check them in the DJ console and click "Save hooks" to correct any that
@@ -10,6 +13,7 @@ var SONGS = {
   r1: {
     label: "Round 1 — Going to the Chapel",
     tag: "wedding",
+    goal: "line",
     songs: [
       ["Chapel of Love",                      "The Dixie Cups",              1964,   0],
       ["White Wedding",                       "Billy Idol",                  1982,  62],
@@ -56,6 +60,7 @@ var SONGS = {
   r2: {
     label: "Round 2 — Songs of 1976",
     tag: "1976",
+    goal: "twoLines",
     songs: [
       ["Dancing Queen",                          "ABBA",                          1976,  12],
       ["Fernando",                               "ABBA",                          1976,  46],
@@ -102,6 +107,7 @@ var SONGS = {
   r3: {
     label: "Round 3 — Golden Oldies",
     tag: "oldies",
+    goal: "frame",
     songs: [
       ["Johnny B. Goode",                  "Chuck Berry",                   1958,   0],
       ["Rock Around the Clock",            "Bill Haley & His Comets",       1954,   0],
@@ -148,6 +154,7 @@ var SONGS = {
   r4: {
     label: "Round 4 — Love Songs",
     tag: "love",
+    goal: "blackout",
     songs: [
       ["I Will Always Love You",            "Whitney Houston",             1992, 150],
       ["Endless Love",                      "Diana Ross & Lionel Richie",  1981,   0],
