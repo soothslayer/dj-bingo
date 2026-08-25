@@ -94,12 +94,34 @@
   /* chrome */
   #pos{position:fixed;right:2.6vmin;bottom:2.2vmin;font-size:2vmin;color:var(--muted);
        font-variant-numeric:tabular-nums}
-  #round{position:fixed;left:2.6vmin;top:2.2vmin;font-size:2vmin;font-weight:700;color:var(--accent);
-       letter-spacing:.1em;text-transform:uppercase}
+  #round{position:fixed;left:2.6vmin;top:2.2vmin;display:flex;align-items:center;gap:1.4vmin}
+  #round .rnum{background:var(--accent);color:#14131a;font-size:2vmin;font-weight:800;letter-spacing:.12em;
+       text-transform:uppercase;padding:.5vmin 1.4vmin;border-radius:.7vmin;white-space:nowrap}
+  #round .rtheme{font-size:2.4vmin;font-weight:700;color:var(--ink);white-space:nowrap}
+  #round .rgoal{display:flex;align-items:center;gap:.7vmin;font-size:1.9vmin;font-weight:600;
+       color:var(--accent);opacity:.85;padding-left:1.2vmin;border-left:.25vmin solid var(--rule);
+       white-space:nowrap}
+  #round .rgoal .gd{width:2.4vmin;height:2.4vmin;flex:none}
   #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:2.2vmin;font-size:1.9vmin;
        color:var(--muted);opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap}
   #hint.on{opacity:.85}
-  #black{position:fixed;inset:0;background:#000;display:none;z-index:9}
+  /* Someone shouted. Fills the screen so the room knows to stop and listen,
+     over the top of whatever slide is showing — the DJ's place is not lost. */
+  #bingo{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;align-items:center;
+       justify-content:center;text-align:center;padding:6vmin;background:var(--accent);color:#14131a}
+  #bingo.on{display:flex}
+  #bingo .word{font-size:19vmin;font-weight:800;line-height:.95;animation:pop .34s ease}
+  #bingo .word.long{font-size:13vmin}
+  @keyframes pop{from{transform:scale(.87);opacity:0}to{transform:none;opacity:1}}
+  #bingo .who{font-size:4.6vmin;font-weight:700;margin-top:3.4vmin}
+  #bingo .ctx{font-size:2.6vmin;font-weight:600;margin-top:1.6vmin;opacity:.72}
+  #callBtn{position:fixed;left:2.6vmin;bottom:2.2vmin;z-index:11;font:inherit;font-size:1.9vmin;
+       font-weight:700;padding:1.1vmin 2vmin;border-radius:1vmin;border:.2vmin solid var(--accent);
+       background:transparent;color:var(--accent);cursor:pointer;opacity:0;transition:opacity .4s;
+       pointer-events:none}
+  #callBtn.on{opacity:.9;pointer-events:auto}
+  #callBtn:hover{background:var(--accent);color:#14131a}
+  #black{position:fixed;inset:0;background:#000;display:none;z-index:20}
   #black.on{display:block}
   #follow{position:fixed;right:2.6vmin;top:2.2vmin;font-size:1.9vmin;color:var(--accent);
        opacity:.75;display:none}
@@ -144,6 +166,7 @@
     <div class="keys">
       <kbd>space</kbd> / <kbd>→</kbd> / clicker — reveal, then next song &nbsp;·&nbsp;
       <kbd>←</kbd> back<br>
+      <kbd>X</kbd> someone called it &mdash; puts it on the screen<br>
       <kbd>R</kbd> restart the countdown &nbsp;·&nbsp; <kbd>P</kbd> pause it &nbsp;·&nbsp;
       <kbd>B</kbd> blank the screen &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp;
       <kbd>Esc</kbd> back to this screen
@@ -157,6 +180,8 @@
   <div id="pos"></div>
   <div id="follow">● following the console</div>
   <div id="hint"></div>
+  <button id="callBtn">Someone called it!</button>
+  <div id="bingo"></div>
   <div id="black"></div>
 </div>
 
@@ -170,6 +195,19 @@ function esc(s){ return String(s).replace(/[&<>"]/g, function(m){
   return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]; }); }
 
 var ACC = { r1:"var(--r1)", r2:"var(--r2)", r3:"var(--r3)", r4:"var(--r4)" };
+
+/* Round labels read "Round 3 — Golden Oldies"; the number and the theme go in
+ * different places on the slide, so split them. A label without the dash still
+ * gets a number, taken from the round's position. */
+function roundParts(rk){
+  var label = SONGS[rk].label, cut = label.indexOf("\u2014");
+  var no = ROUND_KEYS.indexOf(rk) + 1;
+  return {
+    no: no,
+    num: cut > 0 ? label.slice(0, cut).trim() : "Round " + no,
+    theme: cut > 0 ? label.slice(cut + 1).trim() : label
+  };
+}
 
 /* ---------- setup ---------- */
 ROUND_KEYS.forEach(function(rk){
@@ -260,10 +298,15 @@ function tick(){
   timer.raf = requestAnimationFrame(tick);
 }
 
+function setPaused(p){
+  if (timer.paused === p) return;
+  timer.paused = p;
+  if (!p) timer.end = Date.now() + timer.left;              // resume from where it stopped
+}
+
 function togglePause(){
   if (!$("slide").querySelector(".guess")) return;
-  timer.paused = !timer.paused;
-  if (!timer.paused) timer.end = Date.now() + timer.left;   // resume from where it stopped
+  setPaused(!timer.paused);
   flashHint(timer.paused ? "Countdown paused — P to resume" : "Counting down again");
 }
 
@@ -275,9 +318,14 @@ function render(){
   if (!s) return;
   stopTimer();
 
-  var rk = s.rk, goal = goalFor(rk), html = "";
+  var rk = s.rk, goal = goalFor(rk), part = roundParts(rk), html = "";
   document.documentElement.style.setProperty("--accent", ACC[rk]);
-  $("round").textContent = SONGS[rk].label;
+
+  /* Which round, what it is, and how it is won — on screen for every slide, so
+     anyone looking up mid-round knows where they are. */
+  $("round").innerHTML = '<span class="rnum">'+esc(part.num)+'</span>'+
+    '<span class="rtheme">'+esc(part.theme)+'</span>'+
+    '<span class="rgoal">'+goalDiagram(goal, 100)+esc(goal.label)+'</span>';
 
   if (s.kind === "intro"){
     html = '<div class="slide intro">'+
@@ -291,7 +339,7 @@ function render(){
   }
   else if (s.kind === "guess"){
     html = '<div class="slide guess">'+
-      '<div class="eyebrow">Song '+s.n+'</div>'+
+      '<div class="eyebrow">'+esc(part.num)+' &middot; '+esc(part.theme)+' &middot; Song '+s.n+'</div>'+
       '<div class="prompt">Name that tune</div>'+
       '<div class="ringwrap"><svg class="ring" viewBox="0 0 100 100">'+
         '<circle class="track" cx="50" cy="50" r="45"/>'+
@@ -304,7 +352,7 @@ function render(){
     var song = SONGS[rk].songs[s.idx];
     show.seen[rk] = Math.max(show.seen[rk] || 0, s.n);
     html = '<div class="slide reveal">'+
-      '<div class="eyebrow">Song '+s.n+'</div>'+
+      '<div class="eyebrow">'+esc(part.num)+' &middot; '+esc(part.theme)+' &middot; Song '+s.n+'</div>'+
       '<div class="title '+titleClass(song[0])+'">'+esc(song[0])+'</div>'+
       '<div class="artist">'+esc(song[1])+'</div>'+
       '<div class="year">'+song[2]+'</div></div>';
@@ -318,7 +366,7 @@ function render(){
       rows += '<div><i>'+(i+1)+'</i><b>'+esc(t[0])+'</b> <span>&mdash; '+esc(t[1])+'</span></div>';
     }
     html = '<div class="slide recap">'+
-      '<div class="eyebrow">That was</div>'+
+      '<div class="eyebrow">'+esc(part.num)+' &middot; that was</div>'+
       '<div class="name">'+esc(SONGS[rk].label)+'</div>'+
       (seen ? '<div class="list'+(seen > 14 ? " three" : "")+'">'+rows+'</div>'
             : '<div class="sub">No songs played in this round yet.</div>')+
@@ -387,16 +435,52 @@ window.addEventListener("storage", function(e){
   try{ onConsoleWrite(JSON.parse(e.newValue)); }catch(err){}
 });
 
+/* ---------- someone called it ----------
+ *
+ * An overlay rather than a slide: the DJ interrupts the room, checks the card on
+ * the console, and dismisses it back to exactly the song they were on. The word
+ * is whatever this round's win is actually called, so round 3 says FRAME rather
+ * than BINGO and the room learns the rule by seeing it. */
+var callAutoPaused = false;
+
+function callIsUp(){ return $("bingo").classList.contains("on"); }
+
+function showCall(){
+  var s = show.deck[show.i];
+  if (!s || callIsUp()) return;
+  var goal = goalFor(s.rk), part = roundParts(s.rk);
+  var songs = (s.kind === "guess" || s.kind === "reveal") ? s.n : 0;
+
+  $("bingo").innerHTML =
+    '<div class="word'+(goal.call.length > 6 ? " long" : "")+'">'+esc(goal.call)+'!</div>'+
+    '<div class="who">Card number, please</div>'+
+    '<div class="ctx">'+esc(part.num)+' &middot; '+esc(part.theme)+' &middot; '+esc(goal.rule)+
+    (songs ? ' &middot; ' + songs + ' song' + (songs === 1 ? '' : 's') + ' in' : '')+'</div>';
+  $("bingo").classList.add("on");
+
+  /* Freeze the clock while the room is stopped; it picks up where it left off. */
+  if ($("slide").querySelector(".guess") && !timer.paused){ setPaused(true); callAutoPaused = true; }
+}
+
+function hideCall(){
+  if (!callIsUp()) return false;
+  $("bingo").classList.remove("on");
+  if (callAutoPaused){ setPaused(false); callAutoPaused = false; }
+  return true;
+}
+
 /* ---------- chrome ---------- */
 var hintTimer = null;
 function flashHint(msg){
   var h = $("hint");
-  h.textContent = msg || "space reveal · ← back · R restart · P pause · B blank · F fullscreen";
+  h.textContent = msg || "space reveal · ← back · X someone called it · R restart · B blank · F fullscreen";
   h.classList.add("on");
+  $("callBtn").classList.add("on");
   $("stage").classList.add("showcursor");
   clearTimeout(hintTimer);
   hintTimer = setTimeout(function(){
     h.classList.remove("on");
+    $("callBtn").classList.remove("on");
     $("stage").classList.remove("showcursor");
   }, 2600);
 }
@@ -455,6 +539,15 @@ document.addEventListener("keydown", function(e){
     return;
   }
   var k = e.key;
+  if (k === "x" || k === "X"){
+    e.preventDefault(); if (!hideCall()) showCall(); return;
+  }
+  /* While the call is up, the clicker dismisses it instead of moving the deck —
+     one press to carry on, whichever button the DJ's thumb finds. */
+  if (callIsUp() && (k === " " || k === "Spacebar" || k === "Enter" || k === "Escape" ||
+                     k === "ArrowRight" || k === "ArrowLeft" || k === "PageDown" || k === "PageUp")){
+    e.preventDefault(); hideCall(); return;
+  }
   if (k === " " || k === "Spacebar" || k === "ArrowRight" || k === "PageDown" || k === "Enter"){
     e.preventDefault(); next();
   } else if (k === "ArrowLeft" || k === "PageUp" || k === "Backspace"){
@@ -476,8 +569,14 @@ document.addEventListener("keydown", function(e){
 
 /* A tap anywhere advances, so the show can be driven from a phone or a trackpad.
    The blanked screen only un-blanks. */
+$("callBtn").addEventListener("click", function(e){
+  e.stopPropagation();                 // the stage advances on click; this must not
+  showCall();
+});
+
 $("stage").addEventListener("click", function(){
   if ($("black").classList.contains("on")){ $("black").classList.remove("on"); return; }
+  if (hideCall()) return;
   next();
 });
 $("stage").addEventListener("mousemove", function(){ flashHint(); });

@@ -191,10 +191,16 @@ pattern icon, big, so the room can see what they're playing for), then per song 
 **countdown** and a **reveal**, and finally a **recap** listing everything that round
 played — handy while people check their cards.
 
+Every slide carries the round number, the theme and the win condition: as a corner
+header (`ROUND 3 · Golden Oldies · ▣ Picture frame`) and again above the song itself,
+so anyone glancing up mid-round knows where they are — and so it survives a projector
+that crops the edges of the picture.
+
 | Key | Action |
 |---|---|
 | `space` / `→` / `PageDown` / a presenter clicker | Reveal, then on to the next song |
 | `←` / `PageUp` | Back |
+| `X` or the **Someone called it!** button | Put the call up on the screen |
 | `R` | Restart the countdown (use it if the music started late) |
 | `P` | Pause the countdown |
 | `B` | Blank the screen — for speeches, or between rounds |
@@ -202,6 +208,21 @@ played — handy while people check their cards.
 | `Esc` | Back to the setup screen |
 
 Clicking or tapping anywhere also advances, so the show can be driven from a phone.
+
+### When someone calls it
+
+Press `X`, or click **Someone called it!** in the bottom-left corner (it appears with
+the other controls when you move the mouse, and stays off the projection the rest of
+the time). The screen fills with the call and **Card number, please**, which is the
+DJ's cue to go and verify on the console.
+
+The word is whatever *that round* is won by — **BINGO** in round 1, then **DOUBLE
+BINGO**, **FRAME** and **FULL HOUSE** — so the room picks up the rule by seeing it.
+Underneath sits the round, the theme, the win condition and how many songs are in.
+
+It's an overlay, not a slide: the countdown freezes while it's up, and any key or
+click dismisses it straight back to the song you were on with the clock running
+again. A false alarm costs nothing — carry on with the same press.
 
 ### Letting it follow the DJ console
 
