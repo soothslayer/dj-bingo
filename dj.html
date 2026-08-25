@@ -243,7 +243,8 @@ function lsKey(){ return "djbingo:" + state.seed; }
 function save(){
   try{ localStorage.setItem(lsKey(), JSON.stringify({
     played: state.played, hooks: state.hooks, snip: state.snip, libNames: libNames,
-    previews: previews, cardFrom: state.cardFrom, cardTo: state.cardTo })); }catch(e){}
+    previews: previews, cardFrom: state.cardFrom, cardTo: state.cardTo,
+    goals: roundGoalMap() })); }catch(e){}
   try{ localStorage.setItem("djbingo:lastSeed", state.seed); }catch(e){}
 }
 function load(){
@@ -258,6 +259,7 @@ function load(){
       if (d.previews) previews = d.previews;
       if (d.cardFrom) { state.cardFrom = d.cardFrom; $("cardFrom").value = d.cardFrom; }
       if (d.cardTo)   { state.cardTo   = d.cardTo;   $("cardTo").value   = d.cardTo; }
+      if (d.goals && !goalsCameFromURL) setRoundGoals(d.goals);
     } else {
       state.played = emptyPlayed();
     }
@@ -763,6 +765,7 @@ $("cfgFile").onchange = function(){
         load();
         if (d.cardFrom){ state.cardFrom = d.cardFrom; $("cardFrom").value = d.cardFrom; }
         if (d.cardTo){   state.cardTo   = d.cardTo;   $("cardTo").value   = d.cardTo; }
+        if (d.goals) setRoundGoals(d.goals);
         save(); renderAll();
         alert("Loaded seed " + d.seed + " (cards " + state.cardFrom + "\u2013" + state.cardTo + ").");
       }

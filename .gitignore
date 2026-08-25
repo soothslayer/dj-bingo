@@ -6,3 +6,6 @@ _testaudio/
 
 # staged upload directory (built by deploy.sh)
 .deploy/
+
+# wrangler's local cache — holds your Cloudflare account id and email
+.wrangler/

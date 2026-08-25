@@ -20,6 +20,8 @@ var path = require("path");
 var root = path.join(__dirname, "..");
 var S = require(path.join(root, "data/songs.js"));
 global.SONGS = S.SONGS;
+global.ROUND_KEYS = S.ROUND_KEYS;
+global.ROUND_GOALS = S.ROUND_GOALS;
 var b = require(path.join(root, "js/bingo.js"));
 
 var SEED = "ANNIVERSARY-50-6";       // the seed the pages ship with
@@ -40,7 +42,7 @@ S.ROUND_KEYS.forEach(function(rk){
   ok(rk + ": exists", !!round);
   if (!round) return;
   ok(rk + ": has a label", typeof round.label === "string" && round.label.length > 0);
-  ok(rk + ": names a goal that exists", !!b.GOALS[round.goal]);
+  ok(rk + ": ROUND_GOALS names a goal that exists", !!b.GOALS[S.ROUND_GOALS[rk]]);
   ok(rk + ": at least 25 songs (24 squares plus a spare)", round.songs.length >= 25);
 
   round.songs.forEach(function(s, i){
@@ -111,6 +113,49 @@ ok("one diagonal is not an X", !b.checkCard(grid, songsIn([[0,0],[1,1],[2,2],[3,
 ok("both diagonals win the X", b.checkCard(grid, songsIn(b.X_CELLS), "x").won);
 ok("an untouched card has won nothing",
    S.ROUND_KEYS.every(function(rk){ return !b.checkCard(b.buildCard(rk,1,SEED), [], b.goalFor(rk)).won; }));
+
+/* ---------- the goals are configurable, so the plumbing is checked too ----------
+ *
+ * An override that silently failed to apply would be the worst kind of bug
+ * here: the cards would print one pattern and the console would judge another,
+ * and nobody would find out until a guest was told they had not won. */
+
+ok("ROUND_GOALS covers every round",
+   S.ROUND_KEYS.every(function(rk){ return typeof S.ROUND_GOALS[rk] === "string"; }));
+ok("ROUND_GOALS names no round that does not exist",
+   Object.keys(S.ROUND_GOALS).every(function(rk){ return S.ROUND_KEYS.indexOf(rk) >= 0; }));
+ok("with no override, the goal is the one in ROUND_GOALS",
+   S.ROUND_KEYS.every(function(rk){ return b.goalKeyFor(rk) === S.ROUND_GOALS[rk]; }));
+
+(function(){
+  var positional = b.parseGoals("stamp,corners,x,frame");
+  ok("positional ?goals fills the rounds in order",
+     positional.r1 === "stamp" && positional.r2 === "corners" &&
+     positional.r3 === "x" && positional.r4 === "frame");
+
+  var keyed = b.parseGoals("r3:blackout");
+  ok("keyed ?goals sets one round", keyed.r3 === "blackout");
+  ok("keyed ?goals leaves the others alone", Object.keys(keyed).length === 1);
+
+  var skipped = b.parseGoals(",,threeLines");
+  ok("an empty slot skips its round", skipped.r3 === "threeLines" && !skipped.r1 && !skipped.r2);
+
+  b.setRoundGoals({ r1: "frame" });
+  ok("an override wins over ROUND_GOALS", b.goalKeyFor("r1") === "frame");
+  ok("an override reaches goalFor", b.goalFor("r1").key === "frame");
+  ok("an override leaves other rounds alone", b.goalKeyFor("r2") === S.ROUND_GOALS.r2);
+
+  var applied = b.setRoundGoals({ r2: "not-a-goal" });
+  ok("a goal that does not exist is refused", !applied.r2);
+  ok("a refused goal leaves the round on its default", b.goalKeyFor("r2") === S.ROUND_GOALS.r2);
+
+  ok("roundGoalMap reports what is actually in force",
+     b.roundGoalMap().r1 === "frame" && b.roundGoalMap().r2 === S.ROUND_GOALS.r2);
+
+  b.clearRoundGoals();
+  ok("clearing overrides restores every default",
+     S.ROUND_KEYS.every(function(rk){ return b.goalKeyFor(rk) === S.ROUND_GOALS[rk]; }));
+})();
 
 /* Two guests holding the same 24 songs cannot be told apart on the night. */
 S.ROUND_KEYS.forEach(function(rk){

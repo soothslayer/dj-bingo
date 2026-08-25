@@ -223,7 +223,11 @@ try{
   var last = localStorage.getItem("djbingo:lastSeed");
   if (last) $("seed").value = last;
   var saved = last && localStorage.getItem("djbingo:" + last);
-  if (saved){ var sd = JSON.parse(saved); if (sd && sd.snip) $("snip").value = sd.snip; }
+  if (saved){
+    var sd = JSON.parse(saved);
+    if (sd && sd.snip) $("snip").value = sd.snip;
+    if (sd && sd.goals && !goalsCameFromURL) setRoundGoals(sd.goals);
+  }
 }catch(e){}
 
 /* URL parameters, so the projector laptop can be sent straight to the right place:
@@ -418,6 +422,7 @@ function readConsole(){
 function onConsoleWrite(data){
   if (!data) return;
   if (data.snip) show.snip = Math.max(5, Math.min(120, data.snip));
+  if (data.goals && !goalsCameFromURL) setRoundGoals(data.goals);
   var played = data.played || {};
   for (var i = 0; i < ROUND_KEYS.length; i++){
     var rk = ROUND_KEYS[i], list = played[rk] || [];
