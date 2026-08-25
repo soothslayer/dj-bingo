@@ -458,6 +458,9 @@ isn't enabled. After that the site is at `https://<you>.github.io/dj-bingo/`.
 ### It checks before it publishes
 
 The deploy runs [`test/check.js`](test/check.js) first, and won't publish if it fails.
+The checks also run on pull requests — so a change is validated before you decide to
+merge it, not after it's already live — while only pushes and manual runs publish.
+
 That matters most in exactly the situation this is for: you changed a song from your
 phone and can't try it locally. It fails the build on
 

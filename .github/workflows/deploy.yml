@@ -11,6 +11,10 @@
 #   * you can change the song list from the GitHub web editor on a phone and
 #     have it live a minute later.
 #
+# The checks run on pushes AND on pull requests, so a change is validated before
+# you decide to merge it rather than after it is already live. Only pushes and
+# manual runs publish; a pull request never touches the live site.
+#
 # Runs on every push to the default branch, and on demand from the Actions tab
 # (including the GitHub mobile app) via "Run workflow".
 #
@@ -23,16 +27,18 @@ name: Deploy to Pages
 on:
   push:
     branches: [feat/dj-bingo]
+  pull_request:
+    branches: [feat/dj-bingo]
   workflow_dispatch:
 
+# Least privilege by default; the deploy job asks for what it needs.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Never let two deploys race; the newest push is the one that should win.
+# Superseded runs for the same branch are pointless, so drop them. Scoped by ref
+# so that a pull request check never cancels a deploy that is already running.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +58,13 @@ jobs:
   deploy:
     name: Publish
     needs: check
+    # A pull request gets the checks and nothing else — it must never publish.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
