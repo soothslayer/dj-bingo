@@ -4,15 +4,19 @@ Music bingo for a party. Five rounds — 70s, 80s, 90s, 2000s, 2010s — with pr
 for every guest, a DJ console that plays 30-second snippets, and winner verification
 that actually proves the winner won.
 
-Two files, no install, no internet needed:
+No install, no build step:
 
 | File | Who uses it | What it does |
 |---|---|---|
+| [`index.html`](index.html) | Anyone | Landing page linking to the two tools |
 | [`cards.html`](cards.html) | You, before the party | Generates and prints numbered bingo cards |
 | [`dj.html`](dj.html) | The DJ, during the party | Plays snippets, tracks what's played, verifies winners |
 
-Open either by double-clicking it, or serve the folder and visit
+Open any of them by double-clicking, or serve the folder and visit
 `http://localhost:8777` (see [Running from a server](#running-from-a-server)).
+
+There's also a hosted copy at **djbingo.hanlonmiller.com**, limited to an email
+allowlist — see [DEPLOY.md](DEPLOY.md).
 
 ---
 
@@ -281,11 +285,14 @@ right file.
 ## Files
 
 ```
+index.html       landing page linking to the two tools
 cards.html       card generator, DJ run sheet, print layout
 dj.html          DJ console: player, tracking, verification
 data/songs.js    the 200 songs, 40 per decade
 js/bingo.js      seeded card generation + win checking (shared by both pages)
 audio/           drop your music here (git-ignored)
+wrangler.toml    Cloudflare Pages config (see DEPLOY.md)
+deploy.sh        stages the site files and uploads them to Cloudflare Pages
 ```
 
 `js/bingo.js` is deliberately shared: the printer and the verifier must never be able

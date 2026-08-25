@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DJ Bingo</title>
+<style>
+  :root{
+    --ink:#1b1a17; --muted:#6b6559; --rule:#d8d0c0; --paper:#fff;
+    --r1:#b7791f; --r2:#c2410c; --r3:#0f766e; --r4:#6d28d9; --r5:#be123c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       color:var(--ink);background:#f3efe7}
+  .panel{max-width:760px;margin:0 auto;padding:48px 24px 56px}
+  h1{font-size:34px;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 8px;font-size:17px}
+  .rounds{display:flex;gap:6px;flex-wrap:wrap;margin:20px 0 36px}
+  .chip{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+        color:#fff;border-radius:5px;padding:4px 10px}
+  .chip.r1{background:var(--r1)} .chip.r2{background:var(--r2)} .chip.r3{background:var(--r3)}
+  .chip.r4{background:var(--r4)} .chip.r5{background:var(--r5)}
+
+  .cards{display:flex;gap:16px;flex-wrap:wrap}
+  a.card{flex:1;min-width:260px;display:block;text-decoration:none;color:inherit;
+        background:#fff;border:1px solid var(--rule);border-radius:10px;padding:20px 22px 22px;
+        transition:border-color .15s,transform .15s}
+  a.card:hover{border-color:var(--ink);transform:translateY(-2px)}
+  a.card h2{font-size:19px;margin:0 0 2px}
+  a.card .when{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+        color:var(--muted);margin-bottom:10px}
+  a.card p{margin:0;font-size:14px;color:var(--muted);line-height:1.5}
+  a.card .go{display:inline-block;margin-top:14px;font-size:13px;font-weight:700;color:var(--ink)}
+
+  .steps{border:1px solid var(--rule);border-radius:10px;background:#fff;padding:18px 22px 20px;margin-top:32px}
+  .steps h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+        margin:0 0 12px;font-weight:600}
+  .steps ol{margin:0;padding-left:20px;font-size:14px}
+  .steps li{margin-bottom:7px}
+  .steps li:last-child{margin-bottom:0}
+  code{background:#f3efe7;border:1px solid var(--rule);border-radius:4px;padding:1px 5px;font-size:12.5px}
+  footer{margin-top:32px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="panel">
+
+  <h1>DJ Bingo</h1>
+  <p class="sub">Five rounds of music bingo — <span id="songcount">200</span> songs, one seed, everybody&rsquo;s card is different.</p>
+
+  <div class="rounds" id="rounds"></div>
+
+  <div class="cards">
+    <a class="card" href="cards.html">
+      <h2>Card Generator</h2>
+      <div class="when">Before the party</div>
+      <p>Pick your seed and guest count, then print numbered cards — five per guest, one per round. Also prints the DJ run sheet.</p>
+      <span class="go">Open generator &rarr;</span>
+    </a>
+    <a class="card" href="dj.html">
+      <h2>DJ Console</h2>
+      <div class="when">During the party</div>
+      <p>Play 30-second snippets, track what&rsquo;s been played, and verify a shouted &ldquo;bingo!&rdquo; against the winner&rsquo;s card number.</p>
+      <span class="go">Open console &rarr;</span>
+    </a>
+  </div>
+
+  <div class="steps">
+    <h3>If you&rsquo;re testing this</h3>
+    <ol>
+      <li>Start in the <strong>Card Generator</strong>. Leave the seed alone, set guests to 4, and hit generate.</li>
+      <li>Print to PDF rather than paper &mdash; you just want to see that the cards look right.</li>
+      <li>Open the <strong>DJ Console</strong> in a second tab and play a few songs. Snippets stream from Apple&rsquo;s 30-second previews, so the first one may take a moment.</li>
+      <li>After roughly a dozen songs someone will have a line. Use <strong>Verify winner</strong> with a card number to check it.</li>
+    </ol>
+  </div>
+
+  <footer>
+    Music is never hosted here &mdash; snippets are Apple&rsquo;s public 30&#8209;second previews, or your own files, which stay on your machine.
+  </footer>
+
+</div>
+
+<script src="data/songs.js"></script>
+<script>
+  /* Round chips and the song total come from songs.js, so this page can't drift
+     out of date the way the hardcoded four-round copy did. */
+  (function () {
+    var wrap = document.getElementById('rounds');
+    var total = 0;
+    ROUND_KEYS.forEach(function (key) {
+      var round = SONGS[key];
+      total += round.songs.length;
+      var chip = document.createElement('span');
+      chip.className = 'chip ' + key;
+      chip.textContent = round.tag;
+      wrap.appendChild(chip);
+    });
+    document.getElementById('songcount').textContent = total;
+  })();
+</script>
+</body>
+</html>
